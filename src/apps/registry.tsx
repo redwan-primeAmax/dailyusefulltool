@@ -1,6 +1,7 @@
-import {
+import { 
   Activity, ArrowLeftRight, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets,
   Flame, Gamepad2, GraduationCap, Package, Sigma, Store, Timer, Wallet, Wind, StickyNote,
+  FileArchive
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { StoreApp } from './store/StoreApp';
@@ -34,6 +35,7 @@ import { ReaderSettings } from './reader/ReaderSettings';
 import { TriverApp } from './triver/TriverApp';
 import { TriverSettings } from './triver/TriverSettings';
 import { TodoSettings } from './todo/TodoSettings';
+import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
 
 function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -252,6 +254,15 @@ export const APP_CATALOG: AppManifest[] = [
     highlights: ['One-click .md bundle', 'Access-controlled exports', 'Always user-initiated downloads'],
     accent: '#38bdf8', gradient: 'from-sky-500 to-blue-700', icon: Package, core: false,
     screens: [{ id: 'main', component: TriverApp }, { id: 'settings', component: TriverSettings }],
+  },
+  {
+    id: 'zipprocessor', name: 'ZIP Processor', shortName: 'ZIP', developer: 'Web OS Labs',
+    category: 'Tools', subcategory: 'Tools', kind: 'app', version: '1.0.0', sizeMb: 3,
+    rating: 4.9, reviews: '1K', installs: '50K+', updatedAt: 23,
+    description: 'Ultra-fast ZIP extraction and conversion to Markdown or JSON formats with instant preview.',
+    highlights: ['Instant extraction', 'MD/JSON export', 'File selection panel'],
+    accent: '#0ea5e9', gradient: 'from-blue-500 to-indigo-600', icon: FileArchive, core: false,
+    screens: [{ id: 'main', component: ZipProcessorApp }],
   },
 ];
 

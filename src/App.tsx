@@ -168,13 +168,13 @@ function Device() {
             </div>
             <div>
               <h1 className="text-[18px] font-bold text-white leading-tight">Web OS</h1>
-              <p className="text-[11px] text-white/45">v2.0 · 15 apps available</p>
+              <p className="text-[11px] text-white/45">v2.0 · 16 apps available</p>
             </div>
           </div>
 
           <p className="text-[13px] leading-relaxed text-white/55 mb-5">
             A fully offline Android-like operating system running in your browser — complete with a Play Store,
-            15 mini-apps, and IndexedDB persistence.
+            16 mini-apps, and IndexedDB persistence.
           </p>
 
           <div className="space-y-2.5 mb-6">
@@ -184,6 +184,7 @@ function Device() {
               { emoji: '🧮', text: 'Calculator, Notes, To-Do, Habits' },
               { emoji: '🍅', text: 'Pomodoro, Flashcards, Breathe' },
               { emoji: '🌤️', text: 'Weather, BMI, Currency converter' },
+              { emoji: '🤐', text: 'ZIP Processor & Data tools' },
               { emoji: '💾', text: 'Full data backup & restore' },
             ].map(({ emoji, text }) => (
               <div key={text} className="flex items-start gap-2.5 text-[12.5px] text-white/60">
