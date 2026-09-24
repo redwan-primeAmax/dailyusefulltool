@@ -1,0 +1,229 @@
+/* ------------------------------------------------------------------ */
+/*  Theme tokens — semantic colors swap between light / dark device     */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --surface: #070a12;
+  --surface-2: #111826;
+  --surface-3: #1a2334;
+  --ink: #f4f7fb;
+  --ink-2: #9aa8bd;
+  --ink-3: #64748b;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --accent: #0ea5e9;
+  --accent-soft: rgba(14, 165, 233, 0.16);
+  --shadow-card: 0 18px 40px -24px rgba(0, 0, 0, 0.85);
+}
+
+.theme-light {
+  --surface: #f2f4fa;
+  --surface-2: #ffffff;
+  --surface-3: #eaeef7;
+  --ink: #0d1526;
+  --ink-2: #4b5a71;
+  --ink-3: #8494ab;
+  --hairline: rgba(13, 21, 38, 0.09);
+  --accent-soft: rgba(14, 165, 233, 0.12);
+  --shadow-card: 0 16px 36px -26px rgba(15, 23, 42, 0.45);
+}
+
+@theme {
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-surface3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink-2);
+  --color-ink3: var(--ink-3);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-accentsoft: var(--accent-soft);
+  --font-display: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Base                                                               */
+/* ------------------------------------------------------------------ */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  background: #05070d;
+  color: var(--ink);
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input:not([type="password"]),
+textarea,
+select {
+  -webkit-text-security: none;
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-3) inset;
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  transition: background-color 9999s ease-out 0s;
+}
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Utilities                                                          */
+/* ------------------------------------------------------------------ */
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility glass {
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+
+@utility card {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+@utility tap {
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 160ms ease;
+  &:active {
+    transform: scale(0.955);
+    filter: brightness(1.08);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Wallpapers                                                         */
+/* ------------------------------------------------------------------ */
+
+.wp-aurora {
+  background-color: #0a1022;
+  background-image:
+    radial-gradient(60% 45% at 20% 12%, rgba(99, 102, 241, 0.55), transparent 65%),
+    radial-gradient(55% 40% at 85% 25%, rgba(14, 165, 233, 0.45), transparent 70%),
+    radial-gradient(70% 55% at 50% 100%, rgba(236, 72, 153, 0.35), transparent 70%);
+}
+
+.wp-nebula {
+  background-color: #140a24;
+  background-image:
+    radial-gradient(55% 40% at 75% 10%, rgba(168, 85, 247, 0.55), transparent 65%),
+    radial-gradient(60% 45% at 15% 60%, rgba(59, 130, 246, 0.4), transparent 70%),
+    radial-gradient(60% 50% at 60% 95%, rgba(244, 114, 182, 0.35), transparent 70%);
+}
+
+.wp-mint {
+  background-color: #052018;
+  background-image:
+    radial-gradient(55% 40% at 25% 15%, rgba(16, 185, 129, 0.5), transparent 65%),
+    radial-gradient(50% 40% at 85% 55%, rgba(6, 182, 212, 0.4), transparent 70%);
+}
+
+.wp-sunset {
+  background-color: #2a0f16;
+  background-image:
+    radial-gradient(55% 45% at 20% 10%, rgba(251, 146, 60, 0.5), transparent 65%),
+    radial-gradient(60% 45% at 80% 45%, rgba(244, 63, 94, 0.45), transparent 70%),
+    radial-gradient(60% 50% at 45% 100%, rgba(139, 92, 246, 0.35), transparent 70%);
+}
+
+.wp-carbon {
+  background-color: #0b0d10;
+  background-image:
+    radial-gradient(50% 35% at 50% 0%, rgba(148, 163, 184, 0.28), transparent 70%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), transparent 55%);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Keyframes                                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes os-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: os-float 5s ease-in-out infinite;
+}
+
+@keyframes os-pulse-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: os-pulse-ring 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes os-shimmer {
+  from {
+    background-position: -160% 0;
+  }
+  to {
+    background-position: 260% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--hairline) 37%, var(--surface-3) 63%);
+  background-size: 220% 100%;
+  animation: os-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-pulse-ring,
+  .skeleton {
+    animation: none;
+  }
+}
