@@ -28,6 +28,7 @@ export type AppId =
   | 'mathdash'
   | 'reader'
   | 'triver'
+  | 'zipprocessor'
   | 'addiction';
 
 export type ScreenId = 'main' | 'settings';

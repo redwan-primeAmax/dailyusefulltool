@@ -17,7 +17,6 @@ import type {
   ToastMessage,
 } from '../types';
 import { DEFAULT_DEVICE, SETTINGS_KEYS, appService, seedIfFirstRun, settingsService } from '../db/trackerService';
-import { APP_CATALOG } from '../apps/registry';
 import { useIndexedDB } from '../hooks/useIndexedDB';
 import { uid } from '../utils/format';
 
@@ -54,10 +53,10 @@ interface OSContextValue {
 const OSContext = createContext<OSContextValue | null>(null);
 
 /**
- * Core apps are derived from the registry so the catalog stays the single
- * source of truth (a hardcoded list can otherwise drift from the catalog).
+ * Core apps are derived from a static list to avoid circular dependencies
+ * with the app registry.
  */
-const CORE_APPS: AppId[] = APP_CATALOG.filter((app) => app.core).map((app) => app.id);
+const CORE_APPS: AppId[] = ['store', 'backup'];
 
 export function OSProvider({ children }: { children: ReactNode }) {
   const { ready, persistent } = useIndexedDB();

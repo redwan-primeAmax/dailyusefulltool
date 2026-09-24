@@ -1,6 +1,6 @@
 {
   "name": "Web OS",
-  "description": "A modular Android-like web ecosystem with a Play Store, mini-apps and offline IndexedDB persistence.",
+  "description": "A modular Android-like web ecosystem with a Play Store, 16 mini-apps and offline IndexedDB persistence.",
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ],
