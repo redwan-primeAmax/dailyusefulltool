@@ -26,6 +26,7 @@ export type AppId =
   | 'reader'
   | 'triver'
   | 'zipprocessor'
+  | 'wordcounter'
   | 'addiction';
 
 export type ScreenId = 'main' | 'settings';
