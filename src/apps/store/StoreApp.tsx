@@ -223,7 +223,7 @@ function ShelfCard({ app, index, isInstalled, installing, setSelected, handleIns
         <p className="line-clamp-2 text-[10.5px] leading-snug text-white/70">{app.description}</p>
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1 text-[10.5px] font-bold text-amber-300">
-            <Star className="size-3 fill-current" /> {app.rating}
+            {app.reviews === 'New' ? 'New' : <><Star className="size-3 fill-current" /> {app.rating}</>}
           </span>
           <span
             onClick={(e) => {

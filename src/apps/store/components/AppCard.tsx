@@ -38,10 +38,14 @@ export function AppCard({ app, index, installed, progress, onOpen, onInstall, on
           <span className="capitalize">{app.category.toLowerCase()}</span> · {app.developer}
         </p>
         <div className="mt-1 flex items-center gap-2.5 text-[11px] font-semibold text-emerald-200/70">
-          <span className="flex items-center gap-0.5">
-            {app.rating}
-            <Star className="size-3 fill-amber-400 text-amber-400" />
-          </span>
+          {app.reviews === 'New' ? (
+            <span className="font-bold uppercase tracking-wider text-emerald-300">New</span>
+          ) : (
+            <span className="flex items-center gap-0.5">
+              {app.rating}
+              <Star className="size-3 fill-amber-400 text-amber-400" />
+            </span>
+          )}
           <span>{app.sizeMb} MB</span>
           <span className="hidden sm:inline">{app.installs}</span>
         </div>

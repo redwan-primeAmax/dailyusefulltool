@@ -61,7 +61,6 @@ export const SETTINGS_KEYS = {
   memory: 'settings:memory',
   mathdash: 'settings:mathdash',
   breathe: 'settings:breathe',
-  flashcards: 'settings:flashcards',
   reader: 'settings:reader',
   addiction: 'settings:addiction',
   seeded: KEY_SEED,
@@ -370,20 +369,22 @@ export const appService = {
 /*  intentionally seed ZERO log entries. Apps start in a clean state.  */
 /* ------------------------------------------------------------------ */
 
-/** App ids that have been removed from the catalog and must be uninstalled. */
-const RETIRED_APP_IDS: string[] = ['details', 'driver'];
+/** App ids removed from the catalog; old installs are purged at startup. */
+const RETIRED_APP_IDS = ['details', 'driver', 'flashcard', 'currency', 'notes'];
+const RETIRED_APP_SETTINGS_KEYS = ['settings:flashcards'];
 
 export async function seedIfFirstRun(): Promise<boolean> {
   const seeded = await readKey<boolean>(STORE_KV, KEY_SEED);
-  if (!seeded) {
-    await settingsService.set(KEY_SEED, true);
-    return true;
-  }
-  // One-time cleanup: drop installed records for apps no longer shipped.
-  if (RETIRED_APP_IDS.length > 0) {
-    await Promise.all(RETIRED_APP_IDS.map((id) => deleteRecord(STORE_INSTALLED, id)));
-  }
-  return false;
+  if (!seeded) await settingsService.set(KEY_SEED, true);
+
+  // Always run this small idempotent cleanup, including on first boot after an
+  // older backup is restored. v6 also deletes the retired Notes/Flashcards
+  // object stores during the IndexedDB upgrade.
+  await Promise.all([
+    ...RETIRED_APP_IDS.map((id) => deleteRecord(STORE_INSTALLED, id)),
+    ...RETIRED_APP_SETTINGS_KEYS.map((key) => deleteRecord(STORE_KV, key)),
+  ]);
+  return !seeded;
 }
 
 /* ------------------------------------------------------------------ */
@@ -413,7 +414,7 @@ type JsonRecord = Record<string, unknown>;
  */
 const BACKUP_STORES = [
   STORE_WATER, STORE_STUDY, STORE_EXPENSE,
-  'notes', 'habits', 'todos', 'flashcards', STORE_READINGS, STORE_BREATHE_SESSIONS,
+  'habits', 'todos', STORE_READINGS, STORE_BREATHE_SESSIONS,
   STORE_ADDICTION_CHECKINS,
 ];
 const BACKUP_SETTINGS_KEYS = Object.values(SETTINGS_KEYS).filter((k) => k !== KEY_SEED);
@@ -446,7 +447,11 @@ function normalizeBackup(value: unknown): BackupBundle {
       version: 2,
       exportedAt: typeof raw.exportedAt === 'number' ? raw.exportedAt : Date.now(),
       device: { ...DEFAULT_DEVICE, ...(raw.device && typeof raw.device === 'object' ? raw.device : {}) },
-      installed: Array.isArray(raw.installed) ? raw.installed as InstalledAppRecord[] : [],
+      installed: Array.isArray(raw.installed)
+        ? (raw.installed as InstalledAppRecord[]).filter(
+          (app) => app && !RETIRED_APP_IDS.includes(String(app.appId)),
+        )
+        : [],
       settings: raw.settings as Record<string, unknown>,
       stores: Object.fromEntries(
         BACKUP_STORES.map((store) => [store, Array.isArray(rawStores[store]) ? rawStores[store] : []]),
@@ -460,7 +465,11 @@ function normalizeBackup(value: unknown): BackupBundle {
       version: 2,
       exportedAt: typeof raw.exportedAt === 'number' ? raw.exportedAt : Date.now(),
       device: { ...DEFAULT_DEVICE, ...(raw.device && typeof raw.device === 'object' ? raw.device : {}) },
-      installed: Array.isArray(raw.installed) ? raw.installed as InstalledAppRecord[] : [],
+      installed: Array.isArray(raw.installed)
+        ? (raw.installed as InstalledAppRecord[]).filter(
+          (app) => app && !RETIRED_APP_IDS.includes(String(app.appId)),
+        )
+        : [],
       settings: {
         [KEY_WATER]: legacySettings.water ?? null,
         [KEY_STUDY]: legacySettings.study ?? null,
@@ -508,9 +517,11 @@ export const backupService = {
     await Promise.all([
       ...BACKUP_STORES.map((s) => clearStore(s)),
       clearStore(STORE_INSTALLED),
+      clearStore(STORE_KV),
     ]);
 
     await settingsService.saveDevice({ ...DEFAULT_DEVICE, ...(bundle.device ?? {}) });
+    await settingsService.set(KEY_SEED, true);
     for (const key of BACKUP_SETTINGS_KEYS) {
       const value = settings[key];
       if (value && typeof value === 'object') {
@@ -567,9 +578,13 @@ export const backupService = {
     return normalizeBackup(parsed);
   },
 
-  /** Resets the entire device. Used when the user wants a fresh start. */
+  /** Resets the entire device, including app settings and recovery check-ins. */
   async wipe(): Promise<void> {
-    await Promise.all([waterLogs.clear(), studySessions.clear(), expenses.clear(), clearStore(STORE_INSTALLED)]);
+    await Promise.all([
+      ...BACKUP_STORES.map((store) => clearStore(store)),
+      clearStore(STORE_INSTALLED),
+      clearStore(STORE_KV),
+    ]);
     await settingsService.set(KEY_SEED, true);
   },
 };

@@ -1,241 +1,182 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSettings, useCollection } from '../../hooks/useTracker';
-import { writeRecord, deleteRecord, clearStore } from '../../db/indexedDB';
-import { SETTINGS_KEYS, STORE_ADDICTION_CHECKINS } from '../../db/trackerService';
+import { clearStore, readAll, writeRecord } from '../../db/indexedDB';
+import {
+  DEFAULT_ADDICTION,
+  SETTINGS_KEYS,
+  STORE_ADDICTION_CHECKINS,
+  settingsService,
+} from '../../db/trackerService';
 import { toDateKey } from '../../utils/date';
 import { uid } from '../../utils/format';
-import type { AddictionSettings, AddictionGoal, AddictionCheckIn } from '../../types';
-import {
-  CHALLENGE_PHASES,
-  MILESTONE_BADGES,
-  getDailyMotivation,
-  type PhaseInfo,
-  type DailyMotivation,
-} from './addictionModel';
+import type { AddictionCheckIn, AddictionGoal, AddictionSettings, RecoveryMode } from '../../types';
+import { getJourneyDay, type RecoveryPlanDraft } from './addictionModel';
 
-const DEFAULT_ADDICTION_SETTINGS: AddictionSettings = {
+const DEFAULT_SETTINGS: AddictionSettings = {
+  ...(DEFAULT_ADDICTION as AddictionSettings),
   activeGoal: null,
   history: [],
-  enableUrgeSOS: true,
-  dailyReminder: true,
 };
 
+export interface DailyCheckInDraft {
+  mood: AddictionCheckIn['mood'];
+  cravingLevel: number;
+  goalMet: boolean | null;
+  note?: string;
+}
+
+function normalizeGoal(goal: AddictionGoal | null | undefined): AddictionGoal | null {
+  if (!goal || typeof goal !== 'object') return null;
+  const mode = ['quit', 'reduce', 'explore'].includes(String(goal.mode))
+    ? goal.mode as RecoveryMode
+    : 'quit';
+  return {
+    ...goal,
+    mode,
+    active: goal.active !== false,
+    reasons: Array.isArray(goal.reasons) ? goal.reasons.filter((item) => typeof item === 'string') : [],
+    triggers: Array.isArray(goal.triggers) ? goal.triggers.filter((item) => typeof item === 'string') : [],
+    copingActions: Array.isArray(goal.copingActions) ? goal.copingActions.filter((item) => typeof item === 'string') : [],
+    planText: typeof goal.planText === 'string' ? goal.planText : '',
+    supportName: typeof goal.supportName === 'string' ? goal.supportName : '',
+    supportPhone: typeof goal.supportPhone === 'string' ? goal.supportPhone : '',
+    relapses: Number.isFinite(goal.relapses) ? goal.relapses : 0,
+  };
+}
+
+function normalizeSettings(value: AddictionSettings): AddictionSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...value,
+    activeGoal: normalizeGoal(value?.activeGoal),
+    history: Array.isArray(value?.history) ? value.history : [],
+  };
+}
+
 export function useAddictionTracker() {
-  const {
-    settings,
-    update,
-    setSettings,
-    loaded: settingsLoaded,
-  } = useSettings<AddictionSettings>(
-    SETTINGS_KEYS.addiction,
-    DEFAULT_ADDICTION_SETTINGS,
-  );
-
-  const checkIns = useCollection<AddictionCheckIn>(
-    STORE_ADDICTION_CHECKINS as any,
-    async (input) => {
-      const ts = input.ts ?? Date.now();
-      const entry: AddictionCheckIn = {
-        id: uid(),
-        ts,
-        dateKey: toDateKey(ts),
-        dayNumber: (input as any).dayNumber ?? 1,
-        mood: (input as any).mood ?? 'great',
-        note: (input as any).note,
-        cravingsResisted: (input as any).cravingsResisted ?? 0,
-      };
-      await writeRecord(STORE_ADDICTION_CHECKINS, entry as any);
-      return entry;
-    },
-    async (id) => {
-      await deleteRecord(STORE_ADDICTION_CHECKINS, id);
-    },
-    async () => {
-      await clearStore(STORE_ADDICTION_CHECKINS);
-    },
-  );
-
-  // Real-time ticking clock for smooth live second-by-second updates
+  const [settings, setSettings] = useState<AddictionSettings>(DEFAULT_SETTINGS);
+  const [checkIns, setCheckIns] = useState<AddictionCheckIn[]>([]);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
   useEffect(() => {
-    if (!settings.activeGoal?.active) return;
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [settings.activeGoal?.active]);
-
-  const activeGoal = settings.activeGoal;
-
-  const elapsedStats = useMemo(() => {
-    if (!activeGoal || !activeGoal.active) {
-      return {
-        elapsedMs: 0,
-        totalSeconds: 0,
-        days: 0,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-        currentDay: 1,
-        progressPct: 0,
-      };
-    }
-
-    const elapsedMs = Math.max(0, now - activeGoal.startTs);
-    const totalSeconds = Math.floor(elapsedMs / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const targetMs = activeGoal.targetDays * 86400 * 1000;
-    const progressPct = targetMs > 0 ? Math.min(100, Math.round((elapsedMs / targetMs) * 100)) : 0;
-
-    return {
-      elapsedMs,
-      totalSeconds,
-      days,
-      hours,
-      minutes,
-      seconds,
-      currentDay: days + 1,
-      progressPct,
+    let active = true;
+    Promise.all([
+      settingsService.get<AddictionSettings>(SETTINGS_KEYS.addiction, DEFAULT_SETTINGS),
+      readAll<AddictionCheckIn>(STORE_ADDICTION_CHECKINS),
+    ])
+      .then(([storedSettings, storedCheckIns]) => {
+        if (!active) return;
+        setSettings(normalizeSettings(storedSettings));
+        setCheckIns(storedCheckIns.sort((a, b) => b.ts - a.ts));
+      })
+      .catch((error) => console.warn('[recovery] could not load local plan', error))
+      .finally(() => {
+        if (active) setSettingsLoaded(true);
+      });
+    return () => {
+      active = false;
     };
-  }, [activeGoal, now]);
+  }, []);
 
-  const currentPhase = useMemo<PhaseInfo>(() => {
-    const day = elapsedStats.currentDay;
-    if (day <= 7) return CHALLENGE_PHASES[0];
-    if (day <= 14) return CHALLENGE_PHASES[1];
-    return CHALLENGE_PHASES[2];
-  }, [elapsedStats.currentDay]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const phaseProgressPct = useMemo(() => {
-    const day = elapsedStats.currentDay;
-    if (day > 21) return 100;
-    const start = currentPhase.startDay;
-    const end = currentPhase.endDay;
-    const span = end - start + 1;
-    const daysInPhase = Math.max(0, Math.min(span, day - start + 1));
-    return Math.round((daysInPhase / span) * 100);
-  }, [elapsedStats.currentDay, currentPhase]);
-
-  const motivation = useMemo<DailyMotivation>(() => {
-    return getDailyMotivation(elapsedStats.currentDay);
-  }, [elapsedStats.currentDay]);
-
-  const badges = useMemo(() => {
-    const daysClean = elapsedStats.days;
-    return MILESTONE_BADGES.map((b) => ({
-      ...b,
-      unlocked: daysClean >= b.daysRequired,
-    }));
-  }, [elapsedStats.days]);
-
-  const unlockedCount = useMemo(() => badges.filter((b) => b.unlocked).length, [badges]);
-
+  const activeGoal = settings.activeGoal?.active ? settings.activeGoal : null;
   const todayKey = toDateKey(now);
-  const todayCheckIn = useMemo(() => {
-    return checkIns.items.find((c) => c.dateKey === todayKey);
-  }, [checkIns.items, todayKey]);
-
-  // Actions
-  const startChallenge = useCallback(
-    (name: string, category: string, reasons: string[], customStartTs?: number) => {
-      const startTs = customStartTs ?? Date.now();
-      const newGoal: AddictionGoal = {
-        id: uid(),
-        name: name.trim(),
-        category,
-        startTs,
-        targetDays: 21,
-        reasons,
-        active: true,
-        relapses: 0,
-      };
-
-      setSettings({
-        ...settings,
-        activeGoal: newGoal,
-      });
-      return newGoal;
-    },
-    [setSettings, settings],
+  const currentCheckIns = useMemo(
+    () => checkIns.filter((item) => !activeGoal || !item.goalId || item.goalId === activeGoal.id),
+    [activeGoal, checkIns],
   );
-
-  const relapseAndRestart = useCallback(
-    (notes?: string) => {
-      if (!activeGoal) return;
-      const finishedGoal: AddictionGoal = {
-        ...activeGoal,
-        active: false,
-        reasons: notes ? [...activeGoal.reasons, `Trigger noted: ${notes}`] : activeGoal.reasons,
-        relapses: activeGoal.relapses + 1,
-      };
-
-      const newGoal: AddictionGoal = {
-        ...activeGoal,
-        id: uid(),
-        startTs: Date.now(),
-        relapses: activeGoal.relapses + 1,
-        active: true,
-      };
-
-      setSettings({
-        ...settings,
-        activeGoal: newGoal,
-        history: [finishedGoal, ...(settings.history ?? [])],
-      });
-    },
-    [activeGoal, setSettings, settings],
+  const todayCheckIn = useMemo(
+    () => currentCheckIns.find((item) => item.dateKey === todayKey),
+    [currentCheckIns, todayKey],
   );
+  const journeyDay = activeGoal ? getJourneyDay(activeGoal.startTs, now) : 1;
 
-  const logDailyCheckIn = useCallback(
-    async (mood: 'great' | 'good' | 'neutral' | 'struggling', note?: string, cravingsResisted = 0) => {
-      return checkIns.add({
-        ts: Date.now(),
-        dayNumber: elapsedStats.currentDay,
-        mood,
-        note,
-        cravingsResisted,
-      } as any);
-    },
-    [checkIns, elapsedStats.currentDay],
-  );
+  const persistSettings = useCallback(async (next: AddictionSettings) => {
+    setSettings(next);
+    await settingsService.set(SETTINGS_KEYS.addiction, next);
+  }, []);
 
-  const updateGoal = useCallback(
-    (patch: Partial<AddictionGoal>) => {
-      if (!activeGoal) return;
-      const updated = { ...activeGoal, ...patch };
-      setSettings({
-        ...settings,
-        activeGoal: updated,
-      });
-    },
-    [activeGoal, setSettings, settings],
-  );
+  const startPlan = useCallback(async (draft: RecoveryPlanDraft) => {
+    const startTs = Date.now();
+    const goal: AddictionGoal = {
+      id: uid(),
+      name: draft.name.trim(),
+      category: draft.category,
+      presetId: draft.presetId,
+      startTs,
+      mode: draft.mode,
+      planText: draft.planText.trim(),
+      reasons: draft.reasons,
+      triggers: draft.triggers,
+      copingActions: draft.copingActions,
+      supportName: draft.supportName.trim(),
+      supportPhone: draft.supportPhone.trim(),
+      active: true,
+      relapses: 0,
+    };
+    const next = { ...settings, activeGoal: goal };
+    await persistSettings(next);
+    return goal;
+  }, [persistSettings, settings]);
+
+  const updateGoal = useCallback(async (patch: Partial<AddictionGoal>) => {
+    if (!settings.activeGoal) return;
+    const next = {
+      ...settings,
+      activeGoal: { ...settings.activeGoal, ...patch },
+    };
+    await persistSettings(next);
+  }, [persistSettings, settings]);
+
+  const saveDailyCheckIn = useCallback(async (draft: DailyCheckInDraft) => {
+    if (!activeGoal) return;
+    const ts = Date.now();
+    const dateKey = toDateKey(ts);
+    const previous = checkIns.find((item) =>
+      item.dateKey === dateKey && (item.goalId === activeGoal.id || !item.goalId),
+    );
+    const entry: AddictionCheckIn = {
+      id: previous?.id ?? uid(),
+      ts,
+      dateKey,
+      dayNumber: getJourneyDay(activeGoal.startTs, ts),
+      goalId: activeGoal.id,
+      mode: activeGoal.mode ?? 'quit',
+      mood: draft.mood,
+      cravingLevel: Math.max(0, Math.min(10, Math.round(draft.cravingLevel))),
+      goalMet: draft.goalMet,
+      note: draft.note?.trim() || undefined,
+    };
+
+    await writeRecord(STORE_ADDICTION_CHECKINS, entry as unknown as { id: string });
+    setCheckIns((previousEntries) => [
+      entry,
+      ...previousEntries.filter((item) => item.id !== entry.id),
+    ].sort((a, b) => b.ts - a.ts));
+
+    return entry;
+  }, [activeGoal, checkIns]);
 
   const resetAllData = useCallback(async () => {
-    await checkIns.clear();
-    setSettings(DEFAULT_ADDICTION_SETTINGS);
-  }, [checkIns, setSettings]);
+    await clearStore(STORE_ADDICTION_CHECKINS);
+    await persistSettings(DEFAULT_SETTINGS);
+    setCheckIns([]);
+  }, [persistSettings]);
 
   return {
     settings,
     activeGoal,
     settingsLoaded,
-    elapsedStats,
-    currentPhase,
-    phaseProgressPct,
-    motivation,
-    badges,
-    unlockedCount,
+    checkIns: currentCheckIns,
     todayCheckIn,
-    checkIns: checkIns.items,
-    checkInsLoading: checkIns.loading,
-    startChallenge,
-    relapseAndRestart,
-    logDailyCheckIn,
+    journeyDay,
+    startPlan,
     updateGoal,
+    saveDailyCheckIn,
     resetAllData,
-    update,
   };
 }
