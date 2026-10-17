@@ -38,7 +38,7 @@ src/
 5. **Restore safety** — `backupService.restore` validates every row's `id` *before* clearing any store.
 6. **Settings durability** — `useSettings` flushes its pending debounced write on unmount.
 7. **Autofill** — every input declares `type`, `name`, `autoComplete`, and password-manager opt-outs (`data-1p-ignore`, `data-lpignore`, `data-form-type`).
-8. **Retired apps** — startup migration removes obsolete installs/settings; the v6 IndexedDB upgrade permanently drops the Notes and Flashcards stores, and backups never restore retired apps.
+8. **Retired apps and data** — startup migration removes obsolete installs/settings; the v7 IndexedDB upgrade permanently drops the Notes, Flashcards, and legacy addiction-check-in stores. Backups never restore retired apps or the rejected recovery-plan data.
 
 ## Shared conventions
 - **Danger Zone** — every Settings screen ends with `<DangerZone />` for destructive actions.

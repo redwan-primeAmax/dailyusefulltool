@@ -1,107 +1,73 @@
 import { useState } from 'react';
 import { HeartHandshake } from 'lucide-react';
-import type { AddictionGoal } from '../../types';
+import { ConfirmDialog } from '../../components/Modal';
 import { ScreenShell } from '../../components/ui/ScreenShell';
 import { useOS } from '../../context/OSContext';
-import { DailyCheckInModal } from './components/DailyCheckInModal';
-import { RecoveryDashboard } from './components/RecoveryDashboard';
-import { RecoverySetup } from './components/RecoverySetup';
-import { UrgeSupportModal } from './components/UrgeSupportModal';
-import type { RecoveryPlanDraft } from './addictionModel';
+import type { ChallengeDifficulty } from '../../types';
+import { ChallengeDashboard } from './components/ChallengeDashboard';
+import { ChallengeSetup } from './components/ChallengeSetup';
 import { useAddictionTracker } from './useAddictionTracker';
 
-const GENERIC_SUPPORT_PROFILE: AddictionGoal = {
-  id: 'temporary-support',
-  name: 'your next step',
-  category: 'Personal',
-  presetId: 'other',
-  startTs: Date.now(),
-  mode: 'explore',
-  reasons: [],
-  triggers: [],
-  copingActions: [],
-  supportName: '',
-  supportPhone: '',
-  active: true,
-  relapses: 0,
-};
-
 export function AddictionRemoverApp() {
-  const { openScreen, notify } = useOS();
+  const { notify } = useOS();
   const tracker = useAddictionTracker();
-  const [checkInOpen, setCheckInOpen] = useState(false);
-  const [urgeSupportOpen, setUrgeSupportOpen] = useState(false);
-  const profile = tracker.activeGoal;
+  const [confirmNewChallenge, setConfirmNewChallenge] = useState(false);
 
-  const startPlan = async (draft: RecoveryPlanDraft) => {
+  const startChallenge = async (difficulty: ChallengeDifficulty, name: string) => {
     try {
-      await tracker.startPlan(draft);
+      await tracker.startChallenge(difficulty, name);
       notify({
-        title: 'Your plan is ready',
-        description: 'Start with one step that feels safe and manageable.',
+        title: 'চ্যালেঞ্জ শুরু হয়েছে',
+        description: 'প্রতিটি দিনই একটি নতুন পদক্ষেপ।',
         tone: 'success',
       });
     } catch {
-      notify({ title: 'Could not save your plan', description: 'Please check browser storage and try again.', tone: 'danger' });
+      notify({ title: 'সেভ করা যায়নি', description: 'আবার চেষ্টা করো।', tone: 'danger' });
     }
   };
 
-  const saveCheckIn = async (draft: Parameters<typeof tracker.saveDailyCheckIn>[0]) => {
-    const entry = await tracker.saveDailyCheckIn(draft);
-    if (!entry) return;
-    if (entry.mode === 'quit' && entry.goalMet === false) {
-      notify({
-        title: 'Thank you for checking in',
-        description: 'A lapse does not erase your progress. Consider a safe next step or reaching out for support.',
-        tone: 'info',
-      });
-    } else {
-      notify({ title: 'Check-in saved', description: 'You showed up for yourself today.', tone: 'success' });
+  const createNewChallenge = async () => {
+    try {
+      await tracker.resetChallenge();
+      setConfirmNewChallenge(false);
+    } catch {
+      notify({ title: 'চ্যালেঞ্জ বদলানো যায়নি', description: 'আবার চেষ্টা করো।', tone: 'danger' });
     }
   };
 
   return (
     <ScreenShell
-      title="Addiction Remove"
-      subtitle={profile ? `${profile.name} · a plan at your pace` : 'A private recovery companion'}
+      title="আসক্তি চ্যালেঞ্জ"
+      subtitle={tracker.challenge ? 'তোমার ব্যক্তিগত চ্যালেঞ্জ' : 'আজই তোমার চ্যালেঞ্জ বেছে নাও'}
       icon={<HeartHandshake className="size-[19px]" />}
-      onOpenSettings={profile ? () => openScreen('addiction', 'settings') : undefined}
       contentClassName="!space-y-0 !px-0 !pt-4"
     >
       {!tracker.settingsLoaded ? (
         <div className="px-4 py-16 text-center">
           <div className="mx-auto size-8 animate-pulse rounded-full bg-emerald-400/20" />
-          <p className="mt-3 text-[12px] text-ink3">Opening your private plan…</p>
+          <p className="mt-3 text-[12px] text-ink3">তোমার চ্যালেঞ্জ খোলা হচ্ছে…</p>
         </div>
-      ) : profile ? (
-        <RecoveryDashboard
-          profile={profile}
-          checkIns={tracker.checkIns}
-          todayCheckIn={tracker.todayCheckIn}
-          onOpenCheckIn={() => setCheckInOpen(true)}
-          onOpenUrgeSupport={() => setUrgeSupportOpen(true)}
+      ) : tracker.challenge ? (
+        <ChallengeDashboard
+          challenge={tracker.challenge}
+          displayUnit={tracker.displayUnit}
+          now={tracker.now}
+          onDisplayUnitChange={(unit) => void tracker.setDisplayUnit(unit)}
+          onNewChallenge={() => setConfirmNewChallenge(true)}
         />
       ) : (
-        <div className="px-4">
-          <RecoverySetup
-            onStart={(draft) => void startPlan(draft)}
-            onNeedSupport={() => setUrgeSupportOpen(true)}
-          />
-        </div>
+        <ChallengeSetup onStart={(difficulty, name) => void startChallenge(difficulty, name)} />
       )}
 
-      <DailyCheckInModal
-        open={checkInOpen && Boolean(profile)}
-        onClose={() => setCheckInOpen(false)}
-        profile={profile ?? GENERIC_SUPPORT_PROFILE}
-        existing={tracker.todayCheckIn}
-        dayNumber={tracker.journeyDay}
-        onSave={saveCheckIn}
-      />
-      <UrgeSupportModal
-        open={urgeSupportOpen}
-        onClose={() => setUrgeSupportOpen(false)}
-        profile={profile ?? GENERIC_SUPPORT_PROFILE}
+      <ConfirmDialog
+        open={confirmNewChallenge}
+        title="নতুন চ্যালেঞ্জ শুরু করবে?"
+        description="বর্তমান কাউন্টডাউন ও দিন গণনা মুছে যাবে। তোমার নতুন চ্যালেঞ্জ বেছে নেওয়ার পর আবার শুরু হবে।"
+        confirmLabel="নতুন চ্যালেঞ্জ"
+        cancelLabel="ফিরে যাও"
+        tone="warning"
+        onConfirm={() => void createNewChallenge()}
+        onCancel={() => setConfirmNewChallenge(false)}
       />
     </ScreenShell>
   );

@@ -32,7 +32,6 @@ import { TriverSettings } from './triver/TriverSettings';
 import { TodoSettings } from './todo/TodoSettings';
 import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
 import { AddictionRemoverApp } from './addictionRemover/AddictionRemoverApp';
-import { AddictionSettings } from './addictionRemover/AddictionSettings';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
 
 function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -100,13 +99,13 @@ export const APP_CATALOG: AppManifest[] = [
 
   /* ───── APPS ───── */
   {
-    id: 'addiction', name: 'Addiction Remove', shortName: 'Recovery', developer: 'Web OS Health',
-    category: 'Health', subcategory: 'Recovery', kind: 'app', version: '1.0.0', sizeMb: 9,
-    rating: 0, reviews: 'New', installs: '—', updatedAt: 24,
-    description: 'A private, practical recovery companion for substance or behavioural habits, with a personal plan, daily check-ins, urge support and clear medical-safety guidance.',
-    highlights: ['Flexible quit, reduce or explore goals', 'Personal triggers, coping steps & support contact', 'Non-judgmental check-ins and urgent safety guidance'],
+    id: 'addiction', name: 'আসক্তি চ্যালেঞ্জ', shortName: 'চ্যালেঞ্জ', developer: 'Web OS Health',
+    category: 'Health', subcategory: 'Recovery', kind: 'app', version: '2.0.0', sizeMb: 9,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 25,
+    description: 'আসক্তি বা অভ্যাস বদলাতে ৭, ১৪ বা ২২ দিনের বাংলা চ্যালেঞ্জ—সহজ কাউন্টডাউন ও প্রতিদিনের অনুপ্রেরণামূলক বার্তাসহ।',
+    highlights: ['সহজ, মাঝারি ও কঠিন চ্যালেঞ্জ', 'সেকেন্ড, মিনিট, ঘণ্টা বা স্বাভাবিক কাউন্টডাউন', 'প্রতিদিন নতুন বাংলা বার্তা'],
     accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: HeartHandshake, core: false,
-    screens: [{ id: 'main', component: AddictionRemoverApp }, { id: 'settings', component: AddictionSettings }],
+    screens: [{ id: 'main', component: AddictionRemoverApp }],
   },
   {
     id: 'water', name: 'Water Tracker', shortName: 'Water', developer: 'Hydra Studio',

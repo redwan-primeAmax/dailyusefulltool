@@ -13,6 +13,7 @@ import {
   type LogStoreName,
 } from './indexedDB';
 import type {
+  AddictionSettings,
   AppId,
   AppManifest,
   DeviceSettings,
@@ -32,6 +33,7 @@ const KEY_STUDY = 'settings:study';
 const KEY_EXPENSE = 'settings:expense';
 const KEY_DEVICE = 'device:settings';
 const KEY_SEED = 'meta:seeded';
+const KEY_ADDICTION_CHALLENGE_MIGRATED = 'meta:addiction-challenge-migrated';
 
 /** Storage keys used by the `useSettings` hook across all apps. */
 export interface PomodoroSettings {
@@ -68,7 +70,6 @@ export const SETTINGS_KEYS = {
 
 export const STORE_READINGS = 'readings';
 export const STORE_BREATHE_SESSIONS = 'breatheSessions';
-export const STORE_ADDICTION_CHECKINS = 'addictionCheckIns';
 
 /* ------------------------------------------------------------------ */
 /*  Reader                                                             */
@@ -125,11 +126,9 @@ export const DEFAULT_WATER: WaterSettings = {
   scheduleStepMin: 30,       // 30-minute intervals
 };
 
-export const DEFAULT_ADDICTION = {
-  activeGoal: null,
-  history: [],
-  enableUrgeSOS: true,
-  dailyReminder: true,
+export const DEFAULT_ADDICTION: AddictionSettings = {
+  challenge: null,
+  displayUnit: 'normal',
 };
 
 export const DEFAULT_STUDY: StudySettings = {
@@ -377,9 +376,17 @@ export async function seedIfFirstRun(): Promise<boolean> {
   const seeded = await readKey<boolean>(STORE_KV, KEY_SEED);
   if (!seeded) await settingsService.set(KEY_SEED, true);
 
+  // Reset the rejected recovery-plan settings once. The new challenge profile
+  // is then preserved across boots and legacy backups cannot restore old data.
+  const addictionMigrated = await readKey<boolean>(STORE_KV, KEY_ADDICTION_CHALLENGE_MIGRATED);
+  if (!addictionMigrated) {
+    await settingsService.set(SETTINGS_KEYS.addiction, DEFAULT_ADDICTION);
+    await settingsService.set(KEY_ADDICTION_CHALLENGE_MIGRATED, true);
+  }
+
   // Always run this small idempotent cleanup, including on first boot after an
-  // older backup is restored. v6 also deletes the retired Notes/Flashcards
-  // object stores during the IndexedDB upgrade.
+  // older backup is restored. v7 also deletes the retired Notes/Flashcards and
+  // addiction-check-in object stores during the IndexedDB upgrade.
   await Promise.all([
     ...RETIRED_APP_IDS.map((id) => deleteRecord(STORE_INSTALLED, id)),
     ...RETIRED_APP_SETTINGS_KEYS.map((key) => deleteRecord(STORE_KV, key)),
@@ -407,6 +414,27 @@ export interface BackupBundle {
 
 type JsonRecord = Record<string, unknown>;
 
+function isCurrentAddictionSettings(value: unknown): value is AddictionSettings {
+  if (!value || typeof value !== 'object') return false;
+  const settings = value as Partial<AddictionSettings>;
+  if (!('challenge' in settings) || !['seconds', 'minutes', 'normal', 'hours'].includes(String(settings.displayUnit))) {
+    return false;
+  }
+  if (settings.challenge === null) return true;
+  const challenge = settings.challenge;
+  if (!challenge || typeof challenge !== 'object') return false;
+  const expectedDays = challenge.difficulty === 'easy' ? 7 : challenge.difficulty === 'medium' ? 14 : challenge.difficulty === 'hard' ? 22 : null;
+  return Boolean(
+    expectedDays
+    && challenge.durationDays === expectedDays
+    && typeof challenge.id === 'string'
+    && challenge.id.trim()
+    && typeof challenge.name === 'string'
+    && challenge.name.trim()
+    && Number.isFinite(challenge.startTs),
+  );
+}
+
 /**
  * Every user-data store captured by a backup snapshot. Missing one here means
  * its data silently never leaves the device — each entry mirrors a real
@@ -415,7 +443,6 @@ type JsonRecord = Record<string, unknown>;
 const BACKUP_STORES = [
   STORE_WATER, STORE_STUDY, STORE_EXPENSE,
   'habits', 'todos', STORE_READINGS, STORE_BREATHE_SESSIONS,
-  STORE_ADDICTION_CHECKINS,
 ];
 const BACKUP_SETTINGS_KEYS = Object.values(SETTINGS_KEYS).filter((k) => k !== KEY_SEED);
 
@@ -443,6 +470,29 @@ function normalizeBackup(value: unknown): BackupBundle {
     if (!raw.settings || typeof raw.settings !== 'object') throw new Error('Backup settings are missing');
     if (!raw.stores || typeof raw.stores !== 'object') throw new Error('Backup data stores are missing');
     const rawStores = raw.stores as JsonRecord;
+    const settings = { ...(raw.settings as JsonRecord) };
+    const addictionSettings = settings[SETTINGS_KEYS.addiction];
+    if (addictionSettings != null) {
+      if (!isCurrentAddictionSettings(addictionSettings)) {
+        // Older recovery-plan backups must not recreate the rejected profile or flow.
+        delete settings[SETTINGS_KEYS.addiction];
+      } else {
+        // Keep only challenge fields; do not let stale legacy properties survive a restore.
+        const { challenge, displayUnit } = addictionSettings;
+        settings[SETTINGS_KEYS.addiction] = {
+          displayUnit,
+          challenge: challenge
+            ? {
+              id: challenge.id,
+              name: challenge.name.trim(),
+              difficulty: challenge.difficulty,
+              durationDays: challenge.durationDays,
+              startTs: challenge.startTs,
+            }
+            : null,
+        } satisfies AddictionSettings;
+      }
+    }
     return {
       version: 2,
       exportedAt: typeof raw.exportedAt === 'number' ? raw.exportedAt : Date.now(),
@@ -452,7 +502,7 @@ function normalizeBackup(value: unknown): BackupBundle {
           (app) => app && !RETIRED_APP_IDS.includes(String(app.appId)),
         )
         : [],
-      settings: raw.settings as Record<string, unknown>,
+      settings,
       stores: Object.fromEntries(
         BACKUP_STORES.map((store) => [store, Array.isArray(rawStores[store]) ? rawStores[store] : []]),
       ),
@@ -522,6 +572,7 @@ export const backupService = {
 
     await settingsService.saveDevice({ ...DEFAULT_DEVICE, ...(bundle.device ?? {}) });
     await settingsService.set(KEY_SEED, true);
+    await settingsService.set(KEY_ADDICTION_CHALLENGE_MIGRATED, true);
     for (const key of BACKUP_SETTINGS_KEYS) {
       const value = settings[key];
       if (value && typeof value === 'object') {
@@ -578,7 +629,7 @@ export const backupService = {
     return normalizeBackup(parsed);
   },
 
-  /** Resets the entire device, including app settings and recovery check-ins. */
+  /** Resets the entire device, including app settings and challenge data. */
   async wipe(): Promise<void> {
     await Promise.all([
       ...BACKUP_STORES.map((store) => clearStore(store)),
