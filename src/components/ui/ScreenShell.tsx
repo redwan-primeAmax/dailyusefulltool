@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '../../utils/cn';
 import { AppHeader } from './AppHeader';
 import { AmbientBackdrop } from './AmbientBackdrop';
@@ -14,6 +14,8 @@ export interface ScreenShellProps {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  /** Resets the scroll area to the top when the active in-app page changes. */
+  scrollKey?: string;
   footer?: ReactNode;
 }
 
@@ -31,8 +33,14 @@ export function ScreenShell({
   children,
   className,
   contentClassName,
+  scrollKey,
   footer,
 }: ScreenShellProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scrollKey !== undefined && scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [scrollKey]);
+
   return (
     <div className={cn('relative flex h-full min-h-0 flex-col overflow-hidden bg-surface', className)}>
       <AmbientBackdrop />
@@ -44,7 +52,7 @@ export function ScreenShell({
           onOpenSettings={onOpenSettings}
           actions={headerActions}
         />
-        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div ref={scrollRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {hero}
           <div className={cn('space-y-4 px-4 pb-32 pt-4', contentClassName)}>{children}</div>
           {footer}

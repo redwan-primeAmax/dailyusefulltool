@@ -7,8 +7,7 @@ import { StoreApp } from './store/StoreApp';
 import { StoreSettings } from './store/StoreSettings';
 import { WaterTracker } from './waterTracker/WaterTracker';
 import { WaterSettings } from './waterTracker/WaterSettings';
-import { StudyTracker } from './studyTracker/StudyTracker';
-import { StudySettings } from './studyTracker/StudySettings';
+import { ExamTrackerApp } from './examTracker/ExamTrackerApp';
 import { ExpenseTracker } from './expenseTracker/ExpenseTracker';
 import { ExpenseSettings } from './expenseTracker/ExpenseSettings';
 import { BackupApp } from './backup/BackupApp';
@@ -63,7 +62,7 @@ export const APP_CATALOG: AppManifest[] = [
     id: 'store', name: 'Play Store', shortName: 'Store', developer: 'Web OS Labs',
     category: 'System', subcategory: 'System', kind: 'system', version: '15.0.0', sizeMb: 24,
     rating: 4.6, reviews: '128M', installs: '10B+', updatedAt: 20,
-    description: 'Browse, install and uninstall mini-apps. Installed apps appear on the home screen with offline data.',
+    description: 'Browse, install and uninstall mini-apps. Installed apps appear on the home screen with locally saved data.',
     highlights: ['Profile with avatar & Manage Apps', '"New" shelf by release date', 'Real games section'],
     accent: '#22c55e', gradient: 'from-emerald-400 to-teal-600', icon: Store, core: true,
     screens: [{ id: 'main', component: StoreApp }, { id: 'settings', component: StoreSettings }],
@@ -136,13 +135,13 @@ export const APP_CATALOG: AppManifest[] = [
     screens: [{ id: 'main', component: BreatheApp }, { id: 'settings', component: BreatheSettings }],
   },
   {
-    id: 'study', name: 'Study Tracker', shortName: 'Study', developer: 'Deepwork Co.',
-    category: 'Productivity', subcategory: 'Productivity', kind: 'app', version: '2.1.0', sizeMb: 18,
-    rating: 4.7, reviews: '51K', installs: '2M+', updatedAt: 15,
-    description: 'Track focus sessions with a live timer, subjects and daily/weekly goal rings.',
-    highlights: ['Live focus timer', 'Quick-log grid incl. +60 m', 'Weekly goal ring'],
-    accent: '#f59e0b', gradient: 'from-amber-400 to-orange-600', icon: GraduationCap, core: false,
-    screens: [{ id: 'main', component: StudyTracker }, { id: 'settings', component: StudySettings }],
+    id: 'exam', name: 'Exam Tracker', shortName: 'Exam', developer: 'Exam Prep Lab',
+    category: 'Productivity', subcategory: 'Education', kind: 'app', version: '1.0.0', sizeMb: 12,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 26,
+    description: 'Build subject-by-subject exam plans, track completion, and generate detailed category instructions with Gemini.',
+    highlights: ['Animated progress and readiness rating', 'Daily subject plan with completion tracking', 'JSON subject builder and direct Gemini API'],
+    accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: GraduationCap, core: false,
+    screens: [{ id: 'main', component: ExamTrackerApp }],
   },
   {
     id: 'pomodoro', name: 'Pomodoro', shortName: 'Pomodoro', developer: 'Focus Factory',
@@ -249,5 +248,4 @@ export const STORED_APPS = APP_CATALOG.filter((app) => !app.hiddenFromStore);
 export const GAME_APPS = STORED_APPS.filter((app) => app.kind === 'game');
 export const APP_APPS = STORED_APPS.filter((app) => app.kind === 'app');
 export const CORE_APPS = APP_CATALOG.filter((app) => app.core);
-export const STUDY_APPS = APP_CATALOG.filter((a) => ['study', 'pomodoro', 'todo', 'read'].includes(a.id));
 export const APP_CATEGORIES = ['Health', 'Productivity', 'Finance', 'Lifestyle', 'Tools', 'Games'];

@@ -365,7 +365,7 @@ export function WaterSettings() {
       />
 
       <section className="pb-2 text-center text-[11.5px] text-ink3">
-        Water Tracker · v1.5.0 · data stored offline in IndexedDB
+        Water Tracker · v1.5.0 · data saved on this device in IndexedDB
       </section>
     </ScreenShell>
   );

@@ -126,7 +126,7 @@ export function ExpenseList({
       </Card>
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11.5px] text-ink3">
-        <Receipt className="size-3.5" /> Entries are stored offline and survive refreshes
+        <Receipt className="size-3.5" /> Entries are saved on this device and survive refreshes
       </p>
     </div>
   );

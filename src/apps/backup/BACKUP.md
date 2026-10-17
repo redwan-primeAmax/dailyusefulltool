@@ -8,12 +8,12 @@ snapshot of supported user data and restores it only after validation succeeds.
 The backup includes:
 - Device preferences, profile name, profile avatar emoji, and avatar image URL.
 - Installed app records.
-- Supported app settings documents, including the current addiction-challenge settings.
-- Water logs, study sessions, expenses, habits, To-Do tasks, custom readings,
-  and breathing-session history.
+- Supported app settings documents, including Exam Tracker subjects and progress.
+- Water logs, expenses, habits, To-Do tasks, custom readings, and
+  breathing-session history.
 
-Challenge settings may include a user-entered habit or addiction name. Keep
-exported backup files private. Browser-local data itself is not encrypted.
+Exam Tracker Gemini API keys are deliberately omitted from backup files. Add
+the key again in Settings after restoring. Browser-local data is not encrypted.
 
 ## Architecture
 | File | Responsibility |
@@ -32,11 +32,11 @@ exported backup files private. Browser-local data itself is not encrypted.
 ## Restore Safety
 1. The JSON version and required structure are normalized first.
 2. Every data row is validated for an `id` before any local store is cleared.
-3. Retired app records are filtered out; obsolete Notes and Flashcards stores
-   and the old addiction-check-in store are not restored. Legacy recovery-plan
-   settings are also discarded.
-4. Only then are supported stores cleared and rehydrated.
-5. The OS refreshes installed apps and device/profile state after restore.
+3. Retired app records are filtered out; obsolete Notes, Flashcards, Study Tracker,
+   and legacy addiction-check-in data are not restored.
+4. Exam Tracker subjects may be restored, but API keys are always removed.
+5. Only then are supported stores cleared and rehydrated.
+6. The OS refreshes installed apps and device/profile state after restore.
 
 ## Routing
 - `main` → `BackupApp`

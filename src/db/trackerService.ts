@@ -2,7 +2,6 @@ import {
   STORE_EXPENSE,
   STORE_INSTALLED,
   STORE_KV,
-  STORE_STUDY,
   STORE_WATER,
   clearStore,
   readAll,
@@ -18,10 +17,9 @@ import type {
   AppManifest,
   DeviceSettings,
   ExpenseEntry,
+  ExamTrackerSettings,
   ExpenseSettings,
   InstalledAppRecord,
-  StudySession,
-  StudySettings,
   WaterLog,
   WaterSettings,
 } from '../types';
@@ -29,7 +27,7 @@ import { toDateKey } from '../utils/date';
 import { uid } from '../utils/format';
 
 const KEY_WATER = 'settings:water';
-const KEY_STUDY = 'settings:study';
+const KEY_EXAM = 'settings:exam';
 const KEY_EXPENSE = 'settings:expense';
 const KEY_DEVICE = 'device:settings';
 const KEY_SEED = 'meta:seeded';
@@ -54,7 +52,7 @@ export const DEFAULT_POMODORO: PomodoroSettings = {
 
 export const SETTINGS_KEYS = {
   water: KEY_WATER,
-  study: KEY_STUDY,
+  exam: KEY_EXAM,
   expense: KEY_EXPENSE,
   device: KEY_DEVICE,
   pomodoro: 'settings:pomodoro',
@@ -131,18 +129,9 @@ export const DEFAULT_ADDICTION: AddictionSettings = {
   displayUnit: 'normal',
 };
 
-export const DEFAULT_STUDY: StudySettings = {
-  dailyGoalMin: 120,
-  weeklyGoalMin: 720,
-  defaultSessionMin: 45,
-  quickSessions: [15, 25, 45, 60],
-  subjects: [
-    { id: 's1', name: 'Mathematics', color: '#0ea5e9' },
-    { id: 's2', name: 'Physics', color: '#06b6d4' },
-    { id: 's3', name: 'Language', color: '#f59e0b' },
-    { id: 's4', name: 'Programming', color: '#eab308' },
-  ],
-  allowOvernightCarry: true,
+export const DEFAULT_EXAM: ExamTrackerSettings = {
+  subjects: [],
+  geminiApiKey: '',
 };
 
 export const DEFAULT_EXPENSE: ExpenseSettings = {
@@ -277,11 +266,11 @@ export const settingsService = {
     return value;
   },
   water: () => settingsService.get<WaterSettings>(KEY_WATER, DEFAULT_WATER),
-  study: () => settingsService.get<StudySettings>(KEY_STUDY, DEFAULT_STUDY),
+  exam: () => settingsService.get<ExamTrackerSettings>(KEY_EXAM, DEFAULT_EXAM),
   expense: () => settingsService.get<ExpenseSettings>(KEY_EXPENSE, DEFAULT_EXPENSE),
   device: () => settingsService.get<DeviceSettings>(KEY_DEVICE, DEFAULT_DEVICE),
   saveWater: (v: WaterSettings) => settingsService.set(KEY_WATER, v),
-  saveStudy: (v: StudySettings) => settingsService.set(KEY_STUDY, v),
+  saveExam: (v: ExamTrackerSettings) => settingsService.set(KEY_EXAM, v),
   saveExpense: (v: ExpenseSettings) => settingsService.set(KEY_EXPENSE, v),
   saveDevice: (v: DeviceSettings) => settingsService.set(KEY_DEVICE, v),
 };
@@ -329,11 +318,9 @@ function createLogService<T extends LogShape>(store: LogStoreName) {
 }
 
 export const waterLogs = createLogService<WaterLog>(STORE_WATER);
-export const studySessions = createLogService<StudySession>(STORE_STUDY);
 export const expenses = createLogService<ExpenseEntry>(STORE_EXPENSE);
 
 export const waterService = { logs: waterLogs, settings: settingsService.water, saveSettings: settingsService.saveWater };
-export const studyService = { logs: studySessions, settings: settingsService.study, saveSettings: settingsService.saveStudy };
 export const expenseService = { logs: expenses, settings: settingsService.expense, saveSettings: settingsService.saveExpense };
 
 /* ------------------------------------------------------------------ */
@@ -358,7 +345,7 @@ export const appService = {
   },
   async wipe(appId: AppId): Promise<void> {
     if (appId === 'water') await waterLogs.clear();
-    if (appId === 'study') await studySessions.clear();
+    if (appId === 'exam') await settingsService.set(SETTINGS_KEYS.exam, DEFAULT_EXAM);
     if (appId === 'expense') await expenses.clear();
   },
 };
@@ -369,8 +356,8 @@ export const appService = {
 /* ------------------------------------------------------------------ */
 
 /** App ids removed from the catalog; old installs are purged at startup. */
-const RETIRED_APP_IDS = ['details', 'driver', 'flashcard', 'currency', 'notes'];
-const RETIRED_APP_SETTINGS_KEYS = ['settings:flashcards'];
+const RETIRED_APP_IDS = ['details', 'driver', 'flashcard', 'currency', 'notes', 'study'];
+const RETIRED_APP_SETTINGS_KEYS = ['settings:flashcards', 'settings:study'];
 
 export async function seedIfFirstRun(): Promise<boolean> {
   const seeded = await readKey<boolean>(STORE_KV, KEY_SEED);
@@ -385,8 +372,8 @@ export async function seedIfFirstRun(): Promise<boolean> {
   }
 
   // Always run this small idempotent cleanup, including on first boot after an
-  // older backup is restored. v7 also deletes the retired Notes/Flashcards and
-  // addiction-check-in object stores during the IndexedDB upgrade.
+  // older backup is restored. IndexedDB v7 retired Notes/Flashcards and legacy
+  // addiction check-ins; v8 also removes Study Tracker's old session store.
   await Promise.all([
     ...RETIRED_APP_IDS.map((id) => deleteRecord(STORE_INSTALLED, id)),
     ...RETIRED_APP_SETTINGS_KEYS.map((key) => deleteRecord(STORE_KV, key)),
@@ -409,7 +396,7 @@ export interface BackupBundle {
   /** Every data store, keyed by store name. */
   stores: Record<string, unknown[]>;
   /** Legacy v1 fields kept for backward compatibility. */
-  logs?: { water?: WaterLog[]; study?: StudySession[]; expense?: ExpenseEntry[] };
+  logs?: { water?: WaterLog[]; expense?: ExpenseEntry[] };
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -441,10 +428,17 @@ function isCurrentAddictionSettings(value: unknown): value is AddictionSettings 
  * IndexedDB object store created in `indexedDB.ts`.
  */
 const BACKUP_STORES = [
-  STORE_WATER, STORE_STUDY, STORE_EXPENSE,
+  STORE_WATER, STORE_EXPENSE,
   'habits', 'todos', STORE_READINGS, STORE_BREATHE_SESSIONS,
 ];
 const BACKUP_SETTINGS_KEYS = Object.values(SETTINGS_KEYS).filter((k) => k !== KEY_SEED);
+
+function stripExamApiKey(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const safeValue = { ...(value as Record<string, unknown>) };
+  delete safeValue.geminiApiKey;
+  return safeValue;
+}
 
 /**
  * Guard against a partial restore: every data row must carry a usable `id`,
@@ -471,6 +465,15 @@ function normalizeBackup(value: unknown): BackupBundle {
     if (!raw.stores || typeof raw.stores !== 'object') throw new Error('Backup data stores are missing');
     const rawStores = raw.stores as JsonRecord;
     const settings = { ...(raw.settings as JsonRecord) };
+    const examSettings = settings[SETTINGS_KEYS.exam];
+    if (examSettings != null) {
+      const redacted = stripExamApiKey(examSettings);
+      if (redacted && typeof redacted === 'object' && Array.isArray((redacted as { subjects?: unknown }).subjects)) {
+        settings[SETTINGS_KEYS.exam] = redacted;
+      } else {
+        delete settings[SETTINGS_KEYS.exam];
+      }
+    }
     const addictionSettings = settings[SETTINGS_KEYS.addiction];
     if (addictionSettings != null) {
       if (!isCurrentAddictionSettings(addictionSettings)) {
@@ -522,12 +525,10 @@ function normalizeBackup(value: unknown): BackupBundle {
         : [],
       settings: {
         [KEY_WATER]: legacySettings.water ?? null,
-        [KEY_STUDY]: legacySettings.study ?? null,
         [KEY_EXPENSE]: legacySettings.expense ?? null,
       },
       stores: {
         [STORE_WATER]: Array.isArray(legacyLogs.water) ? legacyLogs.water : [],
-        [STORE_STUDY]: Array.isArray(legacyLogs.study) ? legacyLogs.study : [],
         [STORE_EXPENSE]: Array.isArray(legacyLogs.expense) ? legacyLogs.expense : [],
       },
     };
@@ -548,7 +549,10 @@ export const backupService = {
       exportedAt: Date.now(),
       device,
       installed,
-      settings: Object.fromEntries(BACKUP_SETTINGS_KEYS.map((k, i) => [k, settings[i] ?? null])),
+      settings: Object.fromEntries(BACKUP_SETTINGS_KEYS.map((k, i) => [
+        k,
+        k === SETTINGS_KEYS.exam ? stripExamApiKey(settings[i] ?? null) : settings[i] ?? null,
+      ])),
       stores: Object.fromEntries(BACKUP_STORES.map((s, i) => [s, stores[i] ?? []])),
     };
   },
@@ -588,12 +592,17 @@ export const backupService = {
       }
     }
 
+    const examSettings = settings[SETTINGS_KEYS.exam];
+    const examSubjects = examSettings && typeof examSettings === 'object'
+      && Array.isArray((examSettings as { subjects?: unknown }).subjects)
+      ? (examSettings as { subjects: unknown[] }).subjects.length
+      : 0;
     return {
       counts: {
         installed: (bundle.installed ?? []).length,
         water: (stores[STORE_WATER] ?? []).length,
-        study: (stores[STORE_STUDY] ?? []).length,
         expense: (stores[STORE_EXPENSE] ?? []).length,
+        exam: examSubjects,
       },
     };
   },
