@@ -101,7 +101,7 @@ export function ExamTrackerApp() {
             <AddSubjectPage
               subjects={tracker.settings.subjects}
               geminiApiKey={tracker.settings.geminiApiKey}
-              onAddSubject={tracker.addSubject}
+              onAddSubjects={tracker.addSubjects}
               onRemoveSubject={tracker.removeSubject}
               onOpenSettings={() => navigate('settings')}
             />

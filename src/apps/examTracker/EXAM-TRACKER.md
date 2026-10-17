@@ -33,11 +33,16 @@ All interface labels, messages, prompts, and navigation are in English.
 }
 ```
 
-The validator checks JSON syntax, the subject name, required category fields,
-duplicate categories, topic types and limits, and recommended study time. It
-reports specific issues and offers a dedicated copy-error-report action. Valid
-JSON adds or updates the matching subject; updated categories keep their
-completion history.
+The importer accepts a single subject object, a top-level array of subject
+objects, or an object with a `subjects` array. Batch imports support up to 100
+unique subjects, with up to 40 categories per subject. The Subject Name field is
+used for a single-subject plan; each item in a batch supplies its own name.
+
+The validator checks JSON syntax, subject names, required category fields,
+duplicate subjects/categories, topic types and limits, and recommended study
+time. Common `&amp;` text entities are normalized to `&`. It reports specific
+issues and offers a dedicated copy-error-report action. Valid JSON adds or
+updates matching subjects; updated categories keep their completion history.
 
 ## Gemini API
 The model is hardcoded as `gemini-3.5-flash-lite`. Requests are made directly
