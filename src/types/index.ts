@@ -117,56 +117,24 @@ export interface WaterSettings {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Addiction recovery support                                         */
+/*  Addiction challenge                                                */
 /* ------------------------------------------------------------------ */
 
-export type RecoveryMode = 'quit' | 'reduce' | 'explore';
+export type ChallengeDifficulty = 'easy' | 'medium' | 'hard';
+export type ChallengeDurationDays = 7 | 14 | 22;
+export type ChallengeTimeUnit = 'seconds' | 'minutes' | 'normal' | 'hours';
 
-export interface AddictionGoal {
+export interface AddictionChallenge {
   id: string;
   name: string;
-  category: string;
-  /** Preset key, when the target matches one of the built-in categories. */
-  presetId?: string;
+  difficulty: ChallengeDifficulty;
+  durationDays: ChallengeDurationDays;
   startTs: number;
-  /** Legacy field retained so older local recovery plans still load. */
-  targetDays?: number;
-  mode?: RecoveryMode;
-  /** A personal change target, especially useful for reduction goals. */
-  planText?: string;
-  reasons: string[];
-  triggers?: string[];
-  copingActions?: string[];
-  supportName?: string;
-  supportPhone?: string;
-  active: boolean;
-  /** Lapses are information, not a score or a measure of worth. */
-  relapses: number;
-  /** Kept for compatibility with earlier local plans. */
-  lastUseTs?: number;
-}
-
-export interface AddictionCheckIn {
-  id: string;
-  ts: number;
-  dateKey: string;
-  dayNumber: number;
-  goalId?: string;
-  mode?: RecoveryMode;
-  mood: 'great' | 'good' | 'neutral' | 'struggling' | 'skipped';
-  cravingLevel?: number;
-  /** Whether the user's own goal was met; meaning depends on `mode`. */
-  goalMet?: boolean | null;
-  note?: string;
-  /** Legacy field retained for compatibility with older check-ins. */
-  cravingsResisted?: number;
 }
 
 export interface AddictionSettings {
-  activeGoal: AddictionGoal | null;
-  history: AddictionGoal[];
-  enableUrgeSOS: boolean;
-  dailyReminder: boolean;
+  challenge: AddictionChallenge | null;
+  displayUnit: ChallengeTimeUnit;
 }
 
 export interface WaterLog {

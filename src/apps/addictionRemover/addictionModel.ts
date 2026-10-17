@@ -1,138 +1,118 @@
-import type { RecoveryMode } from '../../types';
+import type {
+  AddictionChallenge,
+  ChallengeDifficulty,
+  ChallengeDurationDays,
+  ChallengeTimeUnit,
+} from '../../types';
 
-export interface PresetAddiction {
-  id: string;
-  name: string;
-  category: string;
-  emoji: string;
-  /** A clinician should help plan changes because stopping can carry extra risk. */
-  needsMedicalSupport?: boolean;
-}
-
-export const PRESET_ADDICTIONS: PresetAddiction[] = [
-  { id: 'nicotine', name: 'Nicotine / vaping', category: 'Substance', emoji: '🚭' },
-  { id: 'alcohol', name: 'Alcohol', category: 'Substance', emoji: '🍺', needsMedicalSupport: true },
-  { id: 'sedatives', name: 'Benzodiazepines / sedatives', category: 'Substance', emoji: '💊', needsMedicalSupport: true },
-  { id: 'opioids', name: 'Opioids / pain medicines', category: 'Substance', emoji: '🩺', needsMedicalSupport: true },
-  { id: 'stimulants', name: 'Stimulants / other drugs', category: 'Substance', emoji: '🧪', needsMedicalSupport: true },
-  { id: 'cannabis', name: 'Cannabis', category: 'Substance', emoji: '🌿' },
-  { id: 'gambling', name: 'Gambling / betting', category: 'Behaviour', emoji: '🎲' },
-  { id: 'digital', name: 'Gaming / social media', category: 'Digital', emoji: '📱' },
-  { id: 'shopping', name: 'Compulsive shopping', category: 'Behaviour', emoji: '🛍️' },
-  { id: 'other', name: 'Something else', category: 'Personal', emoji: '✳️' },
-];
-
-export const RECOVERY_MODES: {
-  id: RecoveryMode;
+export interface ChallengeOption {
+  id: ChallengeDifficulty;
   title: string;
+  englishTitle: string;
+  durationDays: ChallengeDurationDays;
   description: string;
-}[] = [
+  emoji: string;
+}
+
+export const CHALLENGE_OPTIONS: ChallengeOption[] = [
   {
-    id: 'quit',
-    title: 'Stop',
-    description: 'Work toward stopping, with medical advice first if withdrawal could be a risk.',
+    id: 'easy',
+    title: 'সহজ',
+    englishTitle: 'EASY',
+    durationDays: 7,
+    description: '৭ দিনের ছোট শুরু',
+    emoji: '🌱',
   },
   {
-    id: 'reduce',
-    title: 'Reduce',
-    description: 'Choose a realistic change. Get professional guidance for substances or medicines.',
+    id: 'medium',
+    title: 'মাঝারি',
+    englishTitle: 'MEDIUM',
+    durationDays: 14,
+    description: '১৪ দিনের ধারাবাহিক চেষ্টা',
+    emoji: '🌿',
   },
   {
-    id: 'explore',
-    title: 'Explore',
-    description: 'Notice patterns and try one supportive step while you decide what you want.',
+    id: 'hard',
+    title: 'কঠিন',
+    englishTitle: 'HARD',
+    durationDays: 22,
+    description: '২২ দিনের বড় লক্ষ্য',
+    emoji: '🔥',
   },
 ];
 
-export const RECOVERY_REASONS = [
-  'Protect my health',
-  'Be more present with people I care about',
-  'Feel more in control of my time',
-  'Reduce stress and feel steadier',
-  'Save money',
-  'Make space for goals that matter to me',
+export const COUNTDOWN_OPTIONS: { id: ChallengeTimeUnit; label: string }[] = [
+  { id: 'seconds', label: 'সেকেন্ড' },
+  { id: 'minutes', label: 'মিনিট' },
+  { id: 'normal', label: 'স্বাভাবিক' },
+  { id: 'hours', label: 'ঘণ্টা' },
 ];
 
-export const COMMON_TRIGGERS = [
-  'Stress or strong emotions',
-  'Boredom or being alone',
-  'A certain time or place',
-  'People or social settings',
-  'Pain, tiredness or poor sleep',
-  'Easy access or reminders',
-  'Celebrations or weekends',
-];
+export const DAILY_MESSAGES = [
+  'শুরু করেছ—এটাই আজকের বড় পদক্ষেপ।',
+  'আজ শুধু পরের ছোট সিদ্ধান্তটিতে মন দাও।',
+  'কঠিন লাগলে একটু থামো, পানি খাও, নিরাপদ কারও সঙ্গে কথা বলো।',
+  'যে পরিস্থিতি তোমাকে টানে, আজ তার থেকে একটু দূরত্ব তৈরি করো।',
+  'নিজের উদ্দেশ্য মনে করো—কেন এই পরিবর্তন শুরু করেছ?',
+  'একবারে পুরো পথ নয়; আজকের দিনটুকুই সামলাও।',
+  'প্রথম সপ্তাহের শেষ দিন—নিজের চেষ্টাকে স্বীকার করো।',
+  'নতুন সপ্তাহ, নতুন সুযোগ; আগের দিনগুলোর অভিজ্ঞতা কাজে লাগাও।',
+  'কোন সময়ে ইচ্ছেটা বাড়ে খেয়াল করো—খেয়াল করাটাও অগ্রগতি।',
+  'সহায়তা চাওয়া সাহসী পদক্ষেপ।',
+  'কঠিন মুহূর্তে লক্ষ্য ছোট করো—পরের দশ মিনিট দিয়ে শুরু করো।',
+  'আজ একটি নিরাপদ বিকল্প আগে থেকে ঠিক করে রাখো।',
+  'অগ্রগতি সবসময় সোজা পথে হয় না; আবার শুরু করা যায়।',
+  'দুই সপ্তাহের পথ—তুমি চেষ্টা চালিয়ে যাচ্ছ।',
+  'আজ নিজের চারপাশ থেকে একটি প্রলোভনের সংকেত সরিয়ে রাখো।',
+  'বিশ্বাসের কাউকে তোমার লক্ষ্যটা জানাও।',
+  'কঠিন অনুভূতি কিছু সময় থাকতে পারে; সাহায্য নেওয়া ঠিক আছে।',
+  'আজ নিজের প্রতি কঠোর না হয়ে পরের ভালো সিদ্ধান্তটি বেছে নাও।',
+  'তোমার পরিকল্পনা কাজ না করলে, সেটি বদলানো যায়।',
+  'বিশ্রাম ও নিরাপদ পরিবেশের যত্ন নাও।',
+  'আরেকটি দিন চেষ্টা—এটিও মূল্যবান।',
+  'শেষ দিনের চেষ্টা—আজও নিজের যত্নকে গুরুত্ব দাও।',
+] as const;
 
-export const COPING_ACTIONS = [
-  'Move away from the cue and go somewhere safer',
-  'Pause and delay the next decision for 10 minutes',
-  'Slow my breathing and notice what is around me',
-  'Message or call someone I trust',
-  'Go for a short walk or do something with my hands',
-  'Block access or remove a reminder, if it is safe to do so',
-];
-
-export const DAILY_STEPS = [
-  'Make the next choice a little easier: put distance between you and one trigger.',
-  'Send one honest message to someone who wants to support you.',
-  'Take a short pause before acting on an urge; you only need to choose the next step.',
-  'Notice one situation that made today easier or harder. No judgment—just information.',
-  'Plan one activity that gives your time or attention somewhere else to go.',
-  'If today feels difficult, ask for help sooner rather than handling it alone.',
-  'Give yourself credit for showing up. Recovery is built from many small decisions.',
-];
-
-export interface RecoveryPlanDraft {
-  presetId: string;
-  name: string;
-  category: string;
-  mode: RecoveryMode;
-  planText: string;
-  reasons: string[];
-  triggers: string[];
-  copingActions: string[];
-  supportName: string;
-  supportPhone: string;
+export function toBanglaDigits(value: number | string): string {
+  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return String(value).replace(/\d/g, (digit) => digits[Number(digit)]);
 }
 
-export function isHigherRiskTarget(presetId?: string): boolean {
-  return PRESET_ADDICTIONS.some((preset) => preset.id === presetId && preset.needsMedicalSupport);
+export function getChallengeDay(challenge: AddictionChallenge, nowTs = Date.now()): number {
+  const elapsedDays = Math.max(0, Math.floor((nowTs - challenge.startTs) / 86_400_000));
+  return Math.min(challenge.durationDays, elapsedDays + 1);
 }
 
-export function getTargetSafetyNote(presetId?: string): string | null {
-  switch (presetId) {
-    case 'alcohol':
-    case 'sedatives':
-      return 'Stopping alcohol or benzodiazepines/some sedatives suddenly can cause dangerous withdrawal. Do not detox alone or change a prescription on your own. Contact a qualified clinician or addiction service before making a change.';
-    case 'opioids':
-      return 'Please involve a healthcare professional in your plan and ask about overdose prevention. After a break, tolerance can fall; returning to a previous amount of an opioid can be dangerous.';
-    case 'stimulants':
-      return 'A clinician can help plan a safer next step and support sleep or mood changes. Seek urgent help if you feel unsafe or have thoughts of harming yourself.';
-    default:
-      return null;
-  }
+export function getRemainingMs(challenge: AddictionChallenge, nowTs = Date.now()): number {
+  const deadline = challenge.startTs + challenge.durationDays * 86_400_000;
+  return Math.max(0, deadline - nowTs);
 }
 
-export function getGoalQuestion(mode: RecoveryMode | undefined, targetName: string): string {
-  if (mode === 'reduce') return 'Did you follow the change you planned for today?';
-  if (mode === 'explore') return 'Did you take one small step toward the change you want?';
-  return `Were you able to avoid ${targetName} today?`;
+export function getCountdownValue(
+  challenge: AddictionChallenge,
+  unit: Exclude<ChallengeTimeUnit, 'normal'>,
+  nowTs = Date.now(),
+): number {
+  const remainingMs = getRemainingMs(challenge, nowTs);
+  const divisor = unit === 'seconds' ? 1_000 : unit === 'minutes' ? 60_000 : 3_600_000;
+  return Math.ceil(remainingMs / divisor);
 }
 
-/** Calendar-day count; calculating with UTC calendar dates avoids DST jumps. */
-export function getJourneyDay(startTs: number, nowTs = Date.now()): number {
-  const start = new Date(startTs);
-  const now = new Date(nowTs);
-  const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.max(1, Math.floor((today - startDay) / 86_400_000) + 1);
+export function getNormalCountdown(challenge: AddictionChallenge, nowTs = Date.now()) {
+  const totalSeconds = Math.ceil(getRemainingMs(challenge, nowTs) / 1_000);
+  return {
+    days: Math.floor(totalSeconds / 86_400),
+    hours: Math.floor((totalSeconds % 86_400) / 3_600),
+    minutes: Math.floor((totalSeconds % 3_600) / 60),
+    seconds: totalSeconds % 60,
+  };
 }
 
-export function formatCheckInOutcome(
-  goalMet: boolean | null | undefined,
-  mode: RecoveryMode | undefined,
-): string {
-  if (goalMet === null || goalMet === undefined) return 'Skipped';
-  if (mode === 'explore') return goalMet ? 'Took a step' : 'No step today';
-  return goalMet ? 'Plan followed' : mode === 'reduce' ? 'Plan was hard today' : 'Target happened';
+export function getDailyMessage(day: number, durationDays: number): string {
+  const safeDay = Math.max(1, Math.min(Math.floor(day), durationDays, DAILY_MESSAGES.length));
+  return DAILY_MESSAGES[safeDay - 1] ?? DAILY_MESSAGES[0];
+}
+
+export function getChallengeOption(difficulty: ChallengeDifficulty): ChallengeOption {
+  return CHALLENGE_OPTIONS.find((option) => option.id === difficulty) ?? CHALLENGE_OPTIONS[0];
 }

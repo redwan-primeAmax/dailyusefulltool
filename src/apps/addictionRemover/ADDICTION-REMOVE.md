@@ -1,30 +1,22 @@
-# Addiction Remove
+# আসক্তি চ্যালেঞ্জ
 
-## Purpose
-A private, offline-first self-help companion for people who want support changing a substance-related or behavioural habit. It helps users create a personal recovery plan, notice triggers, choose coping actions, check in without judgment, and contact someone they trust.
+## উদ্দেশ্য
+যে কোনো অভ্যাস বা আসক্তি বদলানোর জন্য একটি সহজ, ব্যক্তিগত বাংলা চ্যালেঞ্জ। অ্যাপ খুলে প্রথমে ৭ দিনের সহজ, ১৪ দিনের মাঝারি, অথবা ২২ দিনের কঠিন চ্যালেঞ্জ বেছে নিতে হয়; এরপর অভ্যাস বা আসক্তির নাম লিখে শুরু করা যায়।
 
-The app is not a diagnosis, treatment, counselor, withdrawal plan, or guarantee of recovery. It encourages qualified professional and peer support where appropriate. It does not claim that recovery follows a fixed number of days.
+## প্রধান সুবিধা
+- হোম স্ক্রিনে চ্যালেঞ্জ শেষ হতে বাকি সময়ের লাইভ কাউন্টডাউন।
+- মোট সেকেন্ড, মোট মিনিট, মোট ঘণ্টা অথবা দিন-ঘণ্টা-মিনিট-সেকেন্ড—চার ধরনের সময় প্রদর্শন।
+- চ্যালেঞ্জের প্রতিটি দিনের জন্য আলাদা বাংলা বার্তা এবং অগ্রগতির সূচক।
+- নতুন চ্যালেঞ্জ বেছে নিলে বর্তমান কাউন্টডাউন ও দিন গণনা নতুন করে শুরু হয়।
 
-## Plan
-- Choose a listed target or name any other substance, habit, or pattern.
-- Choose a goal: stop, reduce, or explore change, then add an optional practical next goal.
-- Record personal reasons, triggers, coping actions, and an optional trusted contact.
-- Change the plan later in Settings; no streak reset is required after a difficult day.
+## নিরাপত্তা
+মাদক বা ওষুধ হঠাৎ বন্ধ করা বিপজ্জনক হতে পারে। প্রয়োজন হলে চিকিৎসক বা বিশ্বস্ত কারও সাহায্য নিন। এই অ্যাপ চিকিৎসার বিকল্প নয়।
 
-## Support tools
-- Daily mood and urge-intensity check-in, with optional reflection.
-- Short grounding pause with the user's selected coping actions and optional call-to-support link.
-- Non-judgmental progress view based on plan days and check-ins; a lapse does not erase progress.
-- Safety information for withdrawal and urgent situations. Alcohol and benzodiazepine/sedative withdrawal may be dangerous; users are advised to involve a clinician before stopping or changing use. Opioid users are encouraged to seek medical and overdose-prevention support.
+## গোপনীয়তা ও সংরক্ষণ
+চ্যালেঞ্জের নাম, সময় এবং প্রদর্শন পছন্দ এই ব্রাউজারের IndexedDB-তে থাকে; কোনো সার্ভারে পাঠানো হয় না। ডিভাইস ব্যাকআপে বর্তমান চ্যালেঞ্জ সেটিংস থাকতে পারে।
 
-## Privacy and persistence
-Plan details and check-ins are stored in the browser's IndexedDB and are not sent to a server. Browser-local data is not encrypted. Device backups include recovery settings and check-ins, so backup files should be handled carefully. Settings include a destructive action to erase the plan and all check-ins.
-
-## Routing
+## Routing ও data
 - `main` → `AddictionRemoverApp`
-- `settings` → `AddictionSettings`
-
-## Data
 - Settings key: `settings:addiction`
-- Check-in store: `addictionCheckIns`
-- Both are included in device backups and can be erased from the app's Settings.
+- পুরোনো `addictionCheckIns` স্টোর DB v7 আপগ্রেডে মুছে ফেলা হয় এবং নতুন করে তৈরি হয় না।
+- পুরোনো recovery-plan ব্যাকআপ নতুন চ্যালেঞ্জ অ্যাপে পুনরুদ্ধার করা হয় না।

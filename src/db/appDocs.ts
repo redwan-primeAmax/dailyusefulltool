@@ -35,9 +35,9 @@ export const APP_DOCS: AppDocEntry[] = [
   { id: 'weather', title: 'Weather', path: 'apps/weather/WEATHER.md' },
   {
     id: 'addiction',
-    title: 'Addiction Remove',
+    title: 'আসক্তি চ্যালেঞ্জ',
     path: 'apps/addictionRemover/ADDICTION-REMOVE.md',
-    content: `# Addiction Remove\n\nA local-first recovery support tool for substance or behavioural habits. It helps people build a personal plan, notice triggers, choose coping actions, and make non-judgmental check-ins.\n\nThis is self-help support, not diagnosis, treatment, emergency care, or a promise of recovery. Alcohol, benzodiazepines/sedatives, some medicines, and other substances can have dangerous withdrawal risks; users should contact a qualified clinician before stopping or changing use.\n\nRecovery plans and check-ins stay in this browser's IndexedDB unless the user exports a device backup. Backups include this sensitive data.\n`,
+    content: `# আসক্তি চ্যালেঞ্জ\n\nযে কোনো অভ্যাস বা আসক্তি বদলাতে ৭, ১৪ বা ২২ দিনের বাংলা চ্যালেঞ্জ বেছে নাও। নাম লেখার পর হোম স্ক্রিনে লাইভ কাউন্টডাউন, দিনের অগ্রগতি এবং প্রতিদিন আলাদা বার্তা দেখাবে। সময় সেকেন্ড, মিনিট, ঘণ্টা অথবা দিন-ঘণ্টা-মিনিট-সেকেন্ডে দেখা যায়।\n\nমাদক বা ওষুধ হঠাৎ বন্ধ করা বিপজ্জনক হতে পারে। প্রয়োজন হলে চিকিৎসক বা বিশ্বস্ত কারও সাহায্য নাও—এই অ্যাপ চিকিৎসার বিকল্প নয়।\n\nচ্যালেঞ্জের তথ্য এই ব্রাউজারের IndexedDB-তে থাকে। পুরোনো পরিকল্পনার ব্যাকআপ থেকে আগের তথ্য নতুন চ্যালেঞ্জে ফেরত আসে না।\n`,
   },
   { id: 'bmi', title: 'BMI Calculator', path: 'apps/bmi/BMI.md' },
   { id: 'memory', title: 'Memory Match', path: 'apps/games/MEMORY.md' },

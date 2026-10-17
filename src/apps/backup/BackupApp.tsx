@@ -165,6 +165,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
                 const water = lastBundle.settings['settings:water'] as { dailyTargetMl?: number } | undefined;
                 const expense = lastBundle.settings['settings:expense'] as { limit?: number; currency?: string } | undefined;
                 const study = lastBundle.settings['settings:study'] as { dailyGoalMin?: number } | undefined;
+                const addiction = lastBundle.settings['settings:addiction'] as { challenge?: unknown } | undefined;
                 const profile = lastBundle.device;
                 return (
                   <ul className="grid grid-cols-2 gap-1.5 text-[11.5px] text-emerald-200/80">
@@ -175,7 +176,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
                     <li>Study sessions: {lastBundle.stores.studySessions?.length ?? 0}</li>
                     <li>Expense entries: {lastBundle.stores.expenses?.length ?? 0}</li>
                     <li>Habits: {lastBundle.stores.habits?.length ?? 0} · Tasks: {lastBundle.stores.todos?.length ?? 0}</li>
-                    <li>Recovery check-ins: {lastBundle.stores.addictionCheckIns?.length ?? 0}</li>
+                    <li>Addiction challenge: {addiction?.challenge ? 'included' : 'none'}</li>
                     <li>Readings: {lastBundle.stores.readings?.length ?? 0} · Breathe: {lastBundle.stores.breatheSessions?.length ?? 0}</li>
                     <li>Profile: {profile.profileName} · {profile.profileAvatar ? 'avatar ✓' : 'no avatar'}</li>
                     <li>Goal (water): {water?.dailyTargetMl ?? '—'}ml</li>
@@ -248,7 +249,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
         open={confirm === 'wipe'}
         tone="danger"
         title="Erase every app's data?"
-        description="All app data, recovery check-ins, installed apps and device settings are permanently removed."
+        description="All app data, challenge settings, installed apps and device settings are permanently removed."
         confirmLabel="Erase everything"
         onCancel={() => setConfirm(null)}
         onConfirm={handleWipe}
