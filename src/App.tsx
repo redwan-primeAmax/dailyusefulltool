@@ -173,8 +173,8 @@ function Device() {
           </div>
 
           <p className="text-[13px] leading-relaxed text-white/55 mb-5">
-            An offline-first, Android-inspired workspace running in your browser — with a Play Store,
-            practical mini-apps, and local IndexedDB storage.
+            An online Android-inspired workspace that fetches app files from the network, with a Play Store,
+            practical mini-apps, and local IndexedDB storage for your data.
           </p>
 
           <div className="space-y-2.5 mb-6">

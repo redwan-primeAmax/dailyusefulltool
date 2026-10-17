@@ -105,7 +105,7 @@ export function StoreSettings() {
         <SettingsRow
           icon={<Database className="size-[17px]" />}
           label="Storage used"
-          description={`${usageMb} MB of offline tracker data`}
+          description={`${usageMb} MB of locally saved tracker data`}
           control={
             <span className="text-[12px] font-semibold text-ink2">
               {storage ? `${Math.round((storage.usage / Math.max(1, storage.quota)) * 100)}%` : '—'}
@@ -148,7 +148,7 @@ export function StoreSettings() {
       />
 
       <section className="pb-2 text-center text-[11.5px] text-ink3">
-        Play Store · v14.2.6 · all data offline via IndexedDB
+        Play Store · v14.2.6 · tracker data saved locally via IndexedDB
       </section>
     </ScreenShell>
   );

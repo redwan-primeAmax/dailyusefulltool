@@ -63,7 +63,7 @@ export const APP_CATALOG: AppManifest[] = [
     id: 'store', name: 'Play Store', shortName: 'Store', developer: 'Web OS Labs',
     category: 'System', subcategory: 'System', kind: 'system', version: '15.0.0', sizeMb: 24,
     rating: 4.6, reviews: '128M', installs: '10B+', updatedAt: 20,
-    description: 'Browse, install and uninstall mini-apps. Installed apps appear on the home screen with offline data.',
+    description: 'Browse, install and uninstall mini-apps. Installed apps appear on the home screen with locally saved data.',
     highlights: ['Profile with avatar & Manage Apps', '"New" shelf by release date', 'Real games section'],
     accent: '#22c55e', gradient: 'from-emerald-400 to-teal-600', icon: Store, core: true,
     screens: [{ id: 'main', component: StoreApp }, { id: 'settings', component: StoreSettings }],

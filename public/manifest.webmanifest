@@ -1,7 +1,7 @@
 {
   "name": "Web OS — App Store & Tracker Ecosystem",
   "short_name": "Web OS",
-  "description": "A modular Android-like web ecosystem with a Play Store, mini-apps, and offline IndexedDB persistence.",
+  "description": "A modular Android-like web ecosystem with a Play Store, mini-apps, and locally saved app data.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
