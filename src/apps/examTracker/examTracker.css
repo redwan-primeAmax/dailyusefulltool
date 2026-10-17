@@ -1,0 +1,63 @@
+.exam-liquid-progress__fill {
+  transition: width 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.exam-start-study-button {
+  animation: exam-cta-glow 3.2s ease-in-out infinite;
+}
+
+.exam-start-study-button:disabled {
+  animation: none;
+}
+
+.exam-liquid-progress__wave {
+  animation: exam-liquid-flow 5.2s linear infinite;
+}
+
+.exam-liquid-progress__wave--slow {
+  animation-duration: 7.5s;
+  animation-direction: reverse;
+}
+
+.exam-liquid-transition__wave {
+  animation: exam-liquid-flow 6s linear infinite;
+}
+
+.exam-liquid-transition__wave--slow {
+  animation-duration: 8.5s;
+  animation-direction: reverse;
+}
+
+.exam-liquid-bubble {
+  animation: exam-bubble-rise 3.6s ease-in infinite;
+}
+
+@keyframes exam-liquid-flow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes exam-cta-glow {
+  0%, 100% { box-shadow: 0 14px 38px rgba(16,185,129,0.22); }
+  50% { box-shadow: 0 18px 48px rgba(16,185,129,0.38); }
+}
+
+@keyframes exam-bubble-rise {
+  0% { transform: translateY(30px) scale(0.75); opacity: 0; }
+  20% { opacity: 0.65; }
+  100% { transform: translateY(-180px) scale(1.15); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-liquid-progress__wave,
+  .exam-liquid-transition__wave,
+  .exam-liquid-bubble {
+    animation-duration: 30s;
+  }
+  .exam-start-study-button {
+    animation: none;
+  }
+  .exam-liquid-progress__fill {
+    transition-duration: 120ms;
+  }
+}

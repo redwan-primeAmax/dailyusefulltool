@@ -180,9 +180,9 @@ function Device() {
           <div className="space-y-2.5 mb-6">
             {[
               { emoji: '🏪', text: 'Play Store — install / uninstall apps' },
-              { emoji: '💧', text: 'Water, Study & Expense trackers' },
+              { emoji: '📚', text: 'Exam, Water & Expense trackers' },
               { emoji: '🧮', text: 'Calculator, To-Do & Habit Tracker' },
-              { emoji: '🍅', text: 'Pomodoro, Breathe & Study tools' },
+              { emoji: '🍅', text: 'Pomodoro focus timer & guided breathing' },
               { emoji: '🌤️', text: 'Weather, BMI & reading tools' },
               { emoji: '🤝', text: 'আসক্তি চ্যালেঞ্জ — বাংলা কাউন্টডাউন ও বার্তা' },
               { emoji: '🤐', text: 'ZIP Processor & data tools' },

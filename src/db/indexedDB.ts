@@ -1,16 +1,15 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 export const DB_NAME = 'webos-store';
-export const DB_VERSION = 7;
+export const DB_VERSION = 8;
 
 /** Every log store is keyed by `id` and indexed by `dateKey` + `ts`. */
 export const STORE_KV = 'kv';
 export const STORE_INSTALLED = 'installedApps';
 export const STORE_WATER = 'waterLogs';
-export const STORE_STUDY = 'studySessions';
 export const STORE_EXPENSE = 'expenses';
 
-export const LOG_STORES = [STORE_WATER, STORE_STUDY, STORE_EXPENSE] as const;
+export const LOG_STORES = [STORE_WATER, STORE_EXPENSE] as const;
 export type LogStoreName = (typeof LOG_STORES)[number];
 
 let dbPromise: Promise<IDBPDatabase | null> | null = null;
@@ -36,9 +35,9 @@ export function getDB(): Promise<IDBPDatabase | null> {
         store.createIndex('by-ts', 'ts');
       });
 
-      // v7 retires the old recovery check-ins as well as Notes and Flashcards.
-      // Do not recreate these stores after the migration.
-      for (const retired of ['notes', 'flashcards', 'addictionCheckIns']) {
+      // v8 retires Study Tracker data. Earlier migrations also removed Notes,
+      // Flashcards, and the old recovery check-ins; never recreate these stores.
+      for (const retired of ['notes', 'flashcards', 'addictionCheckIns', 'studySessions']) {
         if (db.objectStoreNames.contains(retired)) db.deleteObjectStore(retired);
       }
 

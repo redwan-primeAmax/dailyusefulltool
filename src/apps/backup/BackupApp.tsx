@@ -88,7 +88,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
       setPhase('done');
       notify({
         title: 'System data restored',
-        description: `${counts.installed} app · ${counts.water} water · ${counts.study} study · ${counts.expense} expense`,
+        description: `${counts.installed} ${counts.installed === 1 ? 'app' : 'apps'} · ${counts.exam} exam subjects · ${counts.water} water · ${counts.expense} expense`,
         tone: 'success',
       });
     } catch (error) {
@@ -164,7 +164,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
               {(() => {
                 const water = lastBundle.settings['settings:water'] as { dailyTargetMl?: number } | undefined;
                 const expense = lastBundle.settings['settings:expense'] as { limit?: number; currency?: string } | undefined;
-                const study = lastBundle.settings['settings:study'] as { dailyGoalMin?: number } | undefined;
+                const exam = lastBundle.settings['settings:exam'] as { subjects?: unknown[] } | undefined;
                 const addiction = lastBundle.settings['settings:addiction'] as { challenge?: unknown } | undefined;
                 const profile = lastBundle.device;
                 return (
@@ -173,7 +173,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
                     <li>Apps: {lastBundle.installed.length}</li>
                     <li>Total records: {totalEntries(lastBundle)}</li>
                     <li>Water logs: {lastBundle.stores.waterLogs?.length ?? 0}</li>
-                    <li>Study sessions: {lastBundle.stores.studySessions?.length ?? 0}</li>
+                    <li>Exam subjects: {exam?.subjects?.length ?? 0}</li>
                     <li>Expense entries: {lastBundle.stores.expenses?.length ?? 0}</li>
                     <li>Habits: {lastBundle.stores.habits?.length ?? 0} · Tasks: {lastBundle.stores.todos?.length ?? 0}</li>
                     <li>Addiction challenge: {addiction?.challenge ? 'included' : 'none'}</li>
@@ -181,7 +181,6 @@ export function BackupApp(_props: BackupAppProps = {}) {
                     <li>Profile: {profile.profileName} · {profile.profileAvatar ? 'avatar ✓' : 'no avatar'}</li>
                     <li>Goal (water): {water?.dailyTargetMl ?? '—'}ml</li>
                     <li>Budget: {expense?.limit ?? '—'} {expense?.currency ?? ''}</li>
-                    <li>Study goal: {study?.dailyGoalMin ?? '—'}m / day</li>
                   </ul>
                 );
               })()}

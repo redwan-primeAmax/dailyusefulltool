@@ -10,7 +10,7 @@ export type AppIconComponent = LucideIcon | ComponentType<React.SVGProps<SVGSVGE
 export type AppId =
   | 'store'
   | 'water'
-  | 'study'
+  | 'exam'
   | 'expense'
   | 'backup'
   | 'calculator'
@@ -146,32 +146,29 @@ export interface WaterLog {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Study tracker                                                      */
+/*  Exam tracker                                                       */
 /* ------------------------------------------------------------------ */
 
-export interface StudySubject {
+export interface ExamCategory {
+  id: string;
+  name: string;
+  instructions: string;
+  topics: string[];
+  recommendedMinutes: number;
+  completed: boolean;
+  completedAt?: number;
+}
+
+export interface ExamSubject {
   id: string;
   name: string;
   color: string;
+  categories: ExamCategory[];
 }
 
-export interface StudySettings {
-  dailyGoalMin: number;
-  weeklyGoalMin: number;
-  defaultSessionMin: number;
-  quickSessions: number[];
-  subjects: StudySubject[];
-  allowOvernightCarry: boolean;
-}
-
-export interface StudySession {
-  id: string;
-  ts: number;
-  dateKey: string;
-  minutes: number;
-  subjectId: string;
-  note?: string;
-  source: 'timer' | 'quick';
+export interface ExamTrackerSettings {
+  subjects: ExamSubject[];
+  geminiApiKey: string;
 }
 
 /* ------------------------------------------------------------------ */

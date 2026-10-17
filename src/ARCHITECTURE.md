@@ -38,7 +38,7 @@ src/
 5. **Restore safety** — `backupService.restore` validates every row's `id` *before* clearing any store.
 6. **Settings durability** — `useSettings` flushes its pending debounced write on unmount.
 7. **Autofill** — every input declares `type`, `name`, `autoComplete`, and password-manager opt-outs (`data-1p-ignore`, `data-lpignore`, `data-form-type`).
-8. **Retired apps and data** — startup migration removes obsolete installs/settings; the v7 IndexedDB upgrade permanently drops the Notes, Flashcards, and legacy addiction-check-in stores. Backups never restore retired apps or the rejected recovery-plan data.
+8. **Retired apps and data** — startup migration removes obsolete installs/settings; v7 dropped Notes, Flashcards, and legacy addiction check-ins, while v8 removes the retired Study Tracker sessions. Backups never restore retired apps or data.
 9. **Fresh assets** — the service worker forwards GET requests to the network with `cache: 'no-store'`, never reads/writes CacheStorage, and purges legacy caches on activation. IndexedDB remains for user data only.
 
 ## Shared conventions

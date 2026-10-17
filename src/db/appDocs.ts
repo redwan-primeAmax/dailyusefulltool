@@ -25,7 +25,7 @@ export const APP_DOCS: AppDocEntry[] = [
   { id: 'store', title: 'Play Store', path: 'apps/store/STORE.md' },
   { id: 'backup', title: 'Backup', path: 'apps/backup/BACKUP.md' },
   { id: 'water', title: 'Water Tracker', path: 'apps/waterTracker/WATER.md' },
-  { id: 'study', title: 'Study Tracker', path: 'apps/studyTracker/STUDY.md' },
+  { id: 'exam', title: 'Exam Tracker', path: 'apps/examTracker/EXAM-TRACKER.md' },
   { id: 'expense', title: 'Expense Limiter', path: 'apps/expenseTracker/EXPENSE.md' },
   { id: 'pomodoro', title: 'Pomodoro', path: 'apps/pomodoro/POMODORO.md' },
   { id: 'habits', title: 'Habit Tracker', path: 'apps/habits/HABITS.md' },
