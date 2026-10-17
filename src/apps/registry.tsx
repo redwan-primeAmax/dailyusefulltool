@@ -1,6 +1,6 @@
 import {
   Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
-  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive,
+  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { StoreApp } from './store/StoreApp';
@@ -30,6 +30,7 @@ import { TriverApp } from './triver/TriverApp';
 import { TriverSettings } from './triver/TriverSettings';
 import { TodoSettings } from './todo/TodoSettings';
 import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
+import { WordCounterApp } from './wordCounter/WordCounterApp';
 import { AddictionRemoverApp } from './addictionRemover/AddictionRemoverApp';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
 
@@ -202,6 +203,15 @@ export const APP_CATALOG: AppManifest[] = [
   },
 
   /* ───── TOOLS ───── */
+  {
+    id: 'wordcounter', name: 'Word Counter', shortName: 'Words', developer: 'Web OS Labs',
+    category: 'Tools', subcategory: 'Writing', kind: 'app', version: '1.0.0', sizeMb: 5,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 27,
+    description: 'Count words and explore 20+ live text statistics with Unicode-aware support for Bengali and other languages.',
+    highlights: ['Live word and character counts', 'Sentences, paragraphs, lines and vocabulary stats', 'Reading, speaking and page estimates', 'Text is analyzed locally in your browser'],
+    accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: FileText, core: false,
+    screens: [{ id: 'main', component: WordCounterApp }],
+  },
   {
     id: 'calculator', name: 'Calculator', shortName: 'Calc', developer: 'MathBox',
     category: 'Tools', subcategory: 'Tools', kind: 'app', version: '5.1.0', sizeMb: 4,
