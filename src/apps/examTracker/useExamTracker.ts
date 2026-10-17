@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { DEFAULT_EXAM, SETTINGS_KEYS } from '../../db/trackerService';
 import { useSettings } from '../../hooks/useTracker';
-import type { ExamCategory, ExamSubject } from '../../types';
+import type { ExamCategory } from '../../types';
 import type { ParsedExamSubject } from './examModel';
 import { categoryToExamCategory, createId, normalizeExamSettings, SUBJECT_COLORS } from './examModel';
 
@@ -12,47 +12,57 @@ export function useExamTracker() {
   );
   const settings = useMemo(() => normalizeExamSettings(rawSettings), [rawSettings]);
 
-  const addSubject = useCallback((input: ParsedExamSubject): 'added' | 'updated' => {
-    const existing = settings.subjects.find(
-      (subject) => subject.name.toLocaleLowerCase() === input.subject.toLocaleLowerCase(),
-    );
-    const result: 'added' | 'updated' = existing ? 'updated' : 'added';
+  const addSubjects = useCallback((inputs: ParsedExamSubject[]): { added: number; updated: number } => {
+    const existingNames = new Set(settings.subjects.map((subject) => subject.name.toLocaleLowerCase()));
+    let added = 0;
+    let updated = 0;
+    for (const input of inputs) {
+      const normalizedName = input.subject.toLocaleLowerCase();
+      if (existingNames.has(normalizedName)) updated += 1;
+      else {
+        added += 1;
+        existingNames.add(normalizedName);
+      }
+    }
 
     setSettings((previous) => {
       const safePrevious = normalizeExamSettings(previous);
-      const index = safePrevious.subjects.findIndex(
-        (subject) => subject.name.toLocaleLowerCase() === input.subject.toLocaleLowerCase(),
-      );
-      if (index < 0) {
-        const subject: ExamSubject = {
-          id: createId(),
-          name: input.subject,
-          color: SUBJECT_COLORS[safePrevious.subjects.length % SUBJECT_COLORS.length],
-          categories: input.categories.map(categoryToExamCategory),
-        };
-        return { ...safePrevious, subjects: [...safePrevious.subjects, subject] };
-      }
-
-      const current = safePrevious.subjects[index];
-      const categories = input.categories.map((incoming) => {
-        const prior = current.categories.find(
-          (category) => category.name.toLocaleLowerCase() === incoming.name.toLocaleLowerCase(),
-        );
-        return prior
-          ? {
-            ...categoryToExamCategory(incoming),
-            id: prior.id,
-            completed: prior.completed,
-            ...(prior.completedAt ? { completedAt: prior.completedAt } : {}),
-          }
-          : categoryToExamCategory(incoming);
-      });
       const nextSubjects = [...safePrevious.subjects];
-      nextSubjects[index] = { ...current, categories };
+      for (const input of inputs) {
+        const index = nextSubjects.findIndex(
+          (subject) => subject.name.toLocaleLowerCase() === input.subject.toLocaleLowerCase(),
+        );
+        if (index < 0) {
+          if (nextSubjects.length >= 100) continue;
+          nextSubjects.push({
+            id: createId(),
+            name: input.subject,
+            color: SUBJECT_COLORS[nextSubjects.length % SUBJECT_COLORS.length],
+            categories: input.categories.map(categoryToExamCategory),
+          });
+          continue;
+        }
+
+        const current = nextSubjects[index];
+        const categories = input.categories.map((incoming) => {
+          const prior = current.categories.find(
+            (category) => category.name.toLocaleLowerCase() === incoming.name.toLocaleLowerCase(),
+          );
+          return prior
+            ? {
+              ...categoryToExamCategory(incoming),
+              id: prior.id,
+              completed: prior.completed,
+              ...(prior.completedAt ? { completedAt: prior.completedAt } : {}),
+            }
+            : categoryToExamCategory(incoming);
+        });
+        nextSubjects[index] = { ...current, categories };
+      }
       return { ...safePrevious, subjects: nextSubjects };
     });
 
-    return result;
+    return { added, updated };
   }, [setSettings, settings.subjects]);
 
   const setCategoryCompleted = useCallback((subjectId: string, categoryId: string, completed: boolean) => {
@@ -88,7 +98,7 @@ export function useExamTracker() {
   return {
     settings,
     loaded,
-    addSubject,
+    addSubjects,
     setCategoryCompleted,
     removeSubject,
     updateApiKey,

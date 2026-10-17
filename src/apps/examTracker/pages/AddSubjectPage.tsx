@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { Check, Copy, FileJson2, Plus, Sparkles, Trash2, WandSparkles } from 'lucide-react';
 import type { ExamSubject } from '../../../types';
 import { callGeminiJson, createSubjectGenerationPrompt } from '../geminiService';
-import { createSubjectJsonTemplate, validateSubjectJson } from '../examModel';
-import type { ParsedExamSubject, SubjectValidationResult } from '../examModel';
+import { createSubjectJsonTemplate, validateSubjectImportJson, validateSubjectJson } from '../examModel';
+import type { ParsedExamSubject, SubjectImportValidationResult } from '../examModel';
 import { copyTextToClipboard } from '../clipboard';
 import { ErrorReport } from '../components/ErrorReport';
 
@@ -15,12 +15,12 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 interface Props {
   subjects: ExamSubject[];
   geminiApiKey: string;
-  onAddSubject: (subject: ParsedExamSubject) => 'added' | 'updated';
+  onAddSubjects: (subjects: ParsedExamSubject[]) => { added: number; updated: number };
   onRemoveSubject: (subjectId: string) => void;
   onOpenSettings: () => void;
 }
 
-export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveSubject, onOpenSettings }: Props) {
+export function AddSubjectPage({ subjects, geminiApiKey, onAddSubjects, onRemoveSubject, onOpenSettings }: Props) {
   const [subjectName, setSubjectName] = useState('');
   const [categoryName, setCategoryName] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
@@ -35,9 +35,10 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
   const jsonCharacterCount = jsonText.length;
   const parsedPreview = useMemo(() => {
     if (!jsonText.trim()) return null;
-    const result = validateSubjectJson(jsonText, subjectName);
+    const result = validateSubjectImportJson(jsonText, subjectName);
     return result.ok ? result.value : null;
   }, [jsonText, subjectName]);
+  const previewCategoryCount = parsedPreview?.reduce((total, subject) => total + subject.categories.length, 0) ?? 0;
 
   const updateSubjectName = (value: string) => {
     setSubjectName(value);
@@ -128,28 +129,42 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
     }
   };
 
-  const addSubject = () => {
-    const result: SubjectValidationResult = validateSubjectJson(jsonText, subjectName);
+  const addSubjects = () => {
+    const result: SubjectImportValidationResult = validateSubjectImportJson(jsonText, subjectName);
     if (!result.ok) {
       setErrors(result.errors);
       setErrorContext('Subject JSON validation');
       setSuccess('');
       return;
     }
-    const alreadyExists = subjects.some(
-      (subject) => subject.name.toLocaleLowerCase() === result.value.subject.toLocaleLowerCase(),
-    );
-    if (!alreadyExists && subjects.length >= 100) {
-      setErrors(['Exam Tracker supports up to 100 subjects. Remove one before adding another.']);
+
+    const existingNames = new Set(subjects.map((subject) => subject.name.toLocaleLowerCase()));
+    const newSubjectCount = result.value.filter(
+      (subject) => !existingNames.has(subject.subject.toLocaleLowerCase()),
+    ).length;
+    if (subjects.length + newSubjectCount > 100) {
+      const overflow = subjects.length + newSubjectCount - 100;
+      setErrors([`This import would exceed the 100-subject limit. Remove ${overflow} ${overflow === 1 ? 'subject' : 'subjects'} and try again.`]);
       setErrorContext('Subject limit');
       setSuccess('');
       return;
     }
-    const action = onAddSubject(result.value);
+
+    const counts = onAddSubjects(result.value);
     setErrors([]);
     setErrorContext('Subject JSON validation');
     setCopyStatus('');
-    setSuccess(`${result.value.subject} ${action === 'added' ? 'was added' : 'was updated'} with ${result.value.categories.length} ${result.value.categories.length === 1 ? 'category' : 'categories'}.`);
+    if (result.value.length === 1) {
+      const imported = result.value[0];
+      const action = counts.updated > 0 ? 'updated' : 'added';
+      setSuccess(`${imported.subject} was ${action} with ${imported.categories.length} ${imported.categories.length === 1 ? 'category' : 'categories'}.`);
+    } else {
+      const summary = [
+        counts.added > 0 ? `${counts.added} ${counts.added === 1 ? 'subject' : 'subjects'} added` : '',
+        counts.updated > 0 ? `${counts.updated} existing ${counts.updated === 1 ? 'subject' : 'subjects'} updated` : '',
+      ].filter(Boolean).join('; ');
+      setSuccess(`Imported ${result.value.length} subjects: ${summary}.`);
+    }
     setSubjectName('');
     setCategoryName('');
     setCategories([]);
@@ -187,7 +202,7 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
 
       <section className="space-y-4 rounded-[24px] border border-white/[0.08] bg-slate-900/75 p-4">
         <div>
-          <label htmlFor="exam-subject-name" className="mb-2 block text-xs font-bold uppercase tracking-[0.13em] text-slate-300">Subject Name</label>
+          <label htmlFor="exam-subject-name" className="mb-2 block text-xs font-bold uppercase tracking-[0.13em] text-slate-300">Subject Name (single plan or Gemini)</label>
           <input
             id="exam-subject-name"
             type="text"
@@ -202,6 +217,7 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
             placeholder="For example, Bengali"
             className="h-12 w-full rounded-xl border border-white/10 bg-slate-950/70 px-3.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-emerald-300/50 focus:ring-2 focus:ring-emerald-300/10"
           />
+          <p className="mt-2 text-xs leading-5 text-slate-500">For a multiple-subject JSON array, leave this blank; each subject object includes its own name.</p>
         </div>
 
         <div>
@@ -313,20 +329,26 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
-          placeholder={'Paste a subject plan, or create a template above.\n\n{"subject":"Bengali","categories":[...] }'}
+          placeholder={'Paste a single subject object or an array of subject objects.\n\n[{"subject":"Bengali","categories":[...]}]'}
           className="min-h-64 w-full resize-y rounded-xl border border-white/10 bg-slate-950/80 p-3.5 font-mono text-xs leading-5 text-slate-200 outline-none placeholder:font-sans placeholder:text-slate-600 focus:border-emerald-300/50 focus:ring-2 focus:ring-emerald-300/10"
         />
         {parsedPreview && (
-          <p className="flex items-center gap-1.5 text-xs text-slate-400" aria-live="polite">
-            <Sparkles size={13} className="text-emerald-300" /> Valid plan preview: {parsedPreview.subject}, {parsedPreview.categories.length} {parsedPreview.categories.length === 1 ? 'category' : 'categories'}.
+          <p className="flex items-start gap-1.5 text-xs leading-5 text-slate-400" aria-live="polite">
+            <Sparkles size={13} className="mt-0.5 shrink-0 text-emerald-300" />
+            <span>
+              Valid plan preview: {parsedPreview.length} {parsedPreview.length === 1 ? 'subject' : 'subjects'}, {' '}
+              {previewCategoryCount} {previewCategoryCount === 1 ? 'category' : 'categories'} — {' '}
+              {parsedPreview.slice(0, 3).map((subject) => subject.subject).join(', ')}
+              {parsedPreview.length > 3 ? `, and ${parsedPreview.length - 3} more` : ''}.
+            </span>
           </p>
         )}
         <button
           type="button"
-          onClick={addSubject}
+          onClick={addSubjects}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-100"
         >
-          <Check size={17} /> Done — validate and add subject
+          <Check size={17} /> Done — validate and add
         </button>
       </section>
 
@@ -334,7 +356,7 @@ export function AddSubjectPage({ subjects, geminiApiKey, onAddSubject, onRemoveS
         <section className="space-y-3">
           <div>
             <h2 className="text-sm font-bold text-white">Your subjects</h2>
-            <p className="mt-1 text-xs text-slate-500">Adding a subject with the same name updates its categories and keeps completion history.</p>
+            <p className="mt-1 text-xs text-slate-500">Imported subjects with matching names update their categories and keep completion history.</p>
           </div>
           <div className="space-y-2">
             {subjects.map((subject) => (

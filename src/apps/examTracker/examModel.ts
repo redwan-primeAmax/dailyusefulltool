@@ -29,6 +29,18 @@ export interface SubjectValidationFailure {
 
 export type SubjectValidationResult = SubjectValidationSuccess | SubjectValidationFailure;
 
+export interface SubjectImportValidationSuccess {
+  ok: true;
+  value: ParsedExamSubject[];
+}
+
+export interface SubjectImportValidationFailure {
+  ok: false;
+  errors: string[];
+}
+
+export type SubjectImportValidationResult = SubjectImportValidationSuccess | SubjectImportValidationFailure;
+
 export interface ProgressSummary {
   totalCategories: number;
   completedCategories: number;
@@ -234,6 +246,108 @@ export function validateSubjectJson(input: string, expectedSubjectName = ''): Su
     return { ok: false, errors: visibleErrors };
   }
   return { ok: true, value: { subject, categories } };
+}
+
+function decodeImportedSubject(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  const decodeText = (text: unknown) => typeof text === 'string' ? text.replace(/&amp;/gi, '&') : text;
+  return {
+    ...value,
+    subject: decodeText(value.subject),
+    categories: Array.isArray(value.categories)
+      ? value.categories.map((category) => {
+        if (!isRecord(category)) return category;
+        return {
+          ...category,
+          name: decodeText(category.name),
+          instructions: decodeText(category.instructions),
+          topics: Array.isArray(category.topics) ? category.topics.map(decodeText) : category.topics,
+        };
+      })
+      : value.categories,
+  };
+}
+
+function limitedErrors(errors: string[]): string[] {
+  const visibleErrors = errors.slice(0, 50);
+  if (errors.length > visibleErrors.length) {
+    visibleErrors.push(`${errors.length - visibleErrors.length} additional validation issue(s) were omitted.`);
+  }
+  return visibleErrors;
+}
+
+/**
+ * Accepts the single-subject shape, a top-level array, or { subjects: [...] }.
+ * API/template generation remains single-subject; this importer supports bulk
+ * plans commonly copied as a JSON array.
+ */
+export function validateSubjectImportJson(input: string, expectedSubjectName = ''): SubjectImportValidationResult {
+  if (!input.trim()) {
+    return { ok: false, errors: ['Paste a subject object or an array of subjects before selecting Done.'] };
+  }
+  if (input.length > 100_000) {
+    return { ok: false, errors: ['The JSON input is too large. Keep it under 100 KB.'] };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripCodeFence(input));
+  } catch {
+    const singleResult = validateSubjectJson(input, expectedSubjectName);
+    return singleResult.ok ? { ok: true, value: [singleResult.value] } : singleResult;
+  }
+
+  if (Array.isArray(parsed)) return validateSubjectBatch(parsed);
+  if (isRecord(parsed) && Array.isArray(parsed.subjects)) return validateSubjectBatch(parsed.subjects);
+  if (!isRecord(parsed)) {
+    return {
+      ok: false,
+      errors: ['The JSON root must be a subject object, an array of subject objects, or an object with a "subjects" array.'],
+    };
+  }
+
+  const decoded = JSON.stringify(decodeImportedSubject(parsed));
+  const result = validateSubjectJson(decoded, expectedSubjectName);
+  return result.ok ? { ok: true, value: [result.value] } : result;
+}
+
+function validateSubjectBatch(items: unknown[]): SubjectImportValidationResult {
+  const errors: string[] = [];
+  if (items.length === 0) return { ok: false, errors: ['The subject list is empty. Add at least one subject.'] };
+  if (items.length > 100) errors.push('A JSON import can contain no more than 100 subjects.');
+
+  const validItems: Array<{ subject: ParsedExamSubject; index: number }> = [];
+  items.slice(0, 100).forEach((item, index) => {
+    const decoded = JSON.stringify(decodeImportedSubject(item));
+    const result = validateSubjectJson(decoded);
+    if (!result.ok) {
+      for (const error of result.errors) {
+        if (error.startsWith('categories[')) {
+          errors.push(`subjects[${index}].${error}`);
+        } else if (error.startsWith('"subject"')) {
+          errors.push(`subjects[${index}].${error.replace('"subject"', 'subject')}`);
+        } else {
+          errors.push(`subjects[${index}]: ${error}`);
+        }
+      }
+      return;
+    }
+    validItems.push({ subject: result.value, index });
+  });
+
+  const seenSubjects = new Map<string, number>();
+  validItems.forEach(({ subject, index }) => {
+    const normalized = subject.subject.toLocaleLowerCase();
+    const previousIndex = seenSubjects.get(normalized);
+    if (previousIndex !== undefined) {
+      errors.push(`subjects[${index}].subject duplicates the subject at subjects[${previousIndex}]: "${subject.subject}".`);
+    } else {
+      seenSubjects.set(normalized, index);
+    }
+  });
+
+  if (errors.length > 0) return { ok: false, errors: limitedErrors(errors) };
+  return { ok: true, value: validItems.map(({ subject }) => subject) };
 }
 
 export function categoryToExamCategory(category: ParsedExamCategory): ExamCategory {
