@@ -4,7 +4,7 @@
  * Works with the vite-plugin-singlefile build (all JS/CSS inlined into index.html).
  */
 
-const CACHE_NAME = 'webos-shell-v1';
+const CACHE_NAME = 'webos-shell-v2';
 const SHELL_URL = '/';
 const SHELL_OFFLINE = '/offline.html';
 

@@ -1,7 +1,6 @@
-import { 
-  Activity, ArrowLeftRight, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets,
-  Flame, Gamepad2, GraduationCap, Package, Sigma, Store, Timer, Wallet, Wind, StickyNote,
-  FileArchive
+import {
+  Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
+  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { StoreApp } from './store/StoreApp';
@@ -14,18 +13,14 @@ import { ExpenseTracker } from './expenseTracker/ExpenseTracker';
 import { ExpenseSettings } from './expenseTracker/ExpenseSettings';
 import { BackupApp } from './backup/BackupApp';
 import { CalculatorApp } from './calculator/CalculatorApp';
-import { NotesApp } from './notes/NotesApp';
 import { HabitsApp } from './habits/HabitsApp';
 import { HabitsSettings } from './habits/HabitsSettings';
 import { PomodoroApp } from './pomodoro/PomodoroApp';
 import { PomodoroSettings } from './pomodoro/PomodoroSettings';
 import { MemoryGame, MemorySettings, MathDash, MathSettings } from './games';
-import { CurrencyApp } from './currency/CurrencyApp';
 import { BmiApp } from './bmi/BmiApp';
 import { TodoApp } from './todo/TodoApp';
 import { WeatherApp } from './weather/WeatherApp';
-import { FlashcardApp } from './flashcard/FlashcardApp';
-import { FlashcardSettings } from './flashcard/FlashcardSettings';
 import { BreatheApp } from './breathe/BreatheApp';
 import { BreatheSettings } from './breathe/BreatheSettings';
 import { ReadApp } from './read/ReadApp';
@@ -36,6 +31,8 @@ import { TriverApp } from './triver/TriverApp';
 import { TriverSettings } from './triver/TriverSettings';
 import { TodoSettings } from './todo/TodoSettings';
 import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
+import { AddictionRemoverApp } from './addictionRemover/AddictionRemoverApp';
+import { AddictionSettings } from './addictionRemover/AddictionSettings';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
 
 function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -103,6 +100,15 @@ export const APP_CATALOG: AppManifest[] = [
 
   /* ───── APPS ───── */
   {
+    id: 'addiction', name: 'Addiction Remove', shortName: 'Recovery', developer: 'Web OS Health',
+    category: 'Health', subcategory: 'Recovery', kind: 'app', version: '1.0.0', sizeMb: 9,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 24,
+    description: 'A private, practical recovery companion for substance or behavioural habits, with a personal plan, daily check-ins, urge support and clear medical-safety guidance.',
+    highlights: ['Flexible quit, reduce or explore goals', 'Personal triggers, coping steps & support contact', 'Non-judgmental check-ins and urgent safety guidance'],
+    accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: HeartHandshake, core: false,
+    screens: [{ id: 'main', component: AddictionRemoverApp }, { id: 'settings', component: AddictionSettings }],
+  },
+  {
     id: 'water', name: 'Water Tracker', shortName: 'Water', developer: 'Hydra Studio',
     category: 'Health', subcategory: 'Health', kind: 'app', version: '1.5.0', sizeMb: 12,
     rating: 4.8, reviews: '92K', installs: '5M+', updatedAt: 18,
@@ -167,25 +173,6 @@ export const APP_CATALOG: AppManifest[] = [
     screens: [{ id: 'main', component: TodoApp }, { id: 'settings', component: TodoSettings }],
   },
   {
-    id: 'flashcard', name: 'Flashcards', shortName: 'Cards', developer: 'StudyBuddy',
-    category: 'Productivity', subcategory: 'Creative', kind: 'app', version: '2.5.0', sizeMb: 14,
-    rating: 4.7, reviews: '28K', installs: '1.5M+', updatedAt: 19,
-    description: 'Create, study and review flashcards with multiple decks, spaced repetition and JSON import/export.',
-    highlights: ['JSON paste & file import', 'Example snippet', 'Flip animation'],
-    accent: '#06b6d4', gradient: 'from-cyan-400 to-sky-600', icon: BookOpen, core: false,
-    screens: [{ id: 'main', component: FlashcardApp }, { id: 'settings', component: FlashcardSettings }],
-  },
-  {
-    id: 'notes', name: 'Notes', shortName: 'Notes', developer: 'Memo Works',
-    category: 'Lifestyle', subcategory: 'Lifestyle', kind: 'app', version: '3.2.0', sizeMb: 13,
-    rating: 4.8, reviews: '87K', installs: '5M+', updatedAt: 15,
-    description: 'Write, pin and search colourful notes that persist offline via IndexedDB.',
-    highlights: ['Masonry card grid', '6 colour themes', 'Pin & search'],
-    accent: '#eab308', gradient: 'from-yellow-400 to-amber-600', icon: StickyNote, core: false,
-    screens: [{ id: 'main', component: NotesApp },
-      { id: 'settings', component: about('notes', 'Notes', '3.2.0', <StickyNote className="size-[19px]" />, 'Colour-coded note cards with pinning, search and offline persistence.', ['notes']) }],
-  },
-  {
     id: 'read', name: 'Read', shortName: 'Read', developer: 'Folio Press',
     category: 'Lifestyle', subcategory: 'Lifestyle', kind: 'app', version: '1.1.0', sizeMb: 6,
     rating: 4.8, reviews: '12K', installs: '800K+', updatedAt: 20,
@@ -214,16 +201,6 @@ export const APP_CATALOG: AppManifest[] = [
     highlights: ['Free-form currency input', 'Strict spending cap', 'Category breakdown'],
     accent: '#ea580c', gradient: 'from-orange-500 to-red-600', icon: Wallet, core: false,
     screens: [{ id: 'main', component: ExpenseTracker }, { id: 'settings', component: ExpenseSettings }],
-  },
-  {
-    id: 'currency', name: 'Currency', shortName: 'Currency', developer: 'FX Studio',
-    category: 'Finance', subcategory: 'Finance', kind: 'app', version: '1.3.0', sizeMb: 5,
-    rating: 4.6, reviews: '55K', installs: '4M+', updatedAt: 14,
-    description: 'Convert between 50+ world currencies instantly with quick-amount buttons.',
-    highlights: ['50+ currencies', 'Quick amounts', 'Swap animation'],
-    accent: '#22c55e', gradient: 'from-emerald-400 to-green-600', icon: ArrowLeftRight, core: false,
-    screens: [{ id: 'main', component: CurrencyApp },
-      { id: 'settings', component: about('currency', 'Currency', '1.3.0', <ArrowLeftRight className="size-[19px]" />, 'Instant conversion across 50+ currencies against USD with quick-amount chips.', []) }],
   },
 
   /* ───── TOOLS ───── */
@@ -273,5 +250,5 @@ export const STORED_APPS = APP_CATALOG.filter((app) => !app.hiddenFromStore);
 export const GAME_APPS = STORED_APPS.filter((app) => app.kind === 'game');
 export const APP_APPS = STORED_APPS.filter((app) => app.kind === 'app');
 export const CORE_APPS = APP_CATALOG.filter((app) => app.core);
-export const STUDY_APPS = APP_CATALOG.filter((a) => ['study', 'flashcard', 'pomodoro', 'notes', 'todo', 'read'].includes(a.id));
+export const STUDY_APPS = APP_CATALOG.filter((a) => ['study', 'pomodoro', 'todo', 'read'].includes(a.id));
 export const APP_CATEGORIES = ['Health', 'Productivity', 'Finance', 'Lifestyle', 'Tools', 'Games'];

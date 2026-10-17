@@ -1,7 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 export const DB_NAME = 'webos-store';
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;
 
 /** Every log store is keyed by `id` and indexed by `dateKey` + `ts`. */
 export const STORE_KV = 'kv';
@@ -35,8 +35,15 @@ export function getDB(): Promise<IDBPDatabase | null> {
         store.createIndex('by-date', 'dateKey');
         store.createIndex('by-ts', 'ts');
       });
-      // App-specific stores (keyed by id, no strict schema)
-      for (const extra of ['notes', 'habits', 'todos', 'flashcards', 'readings', 'breatheSessions', 'addictionCheckIns']) {
+
+      // v6 retires Notes and Flashcards, including their locally stored data.
+      // Do not recreate these stores after this migration.
+      for (const retired of ['notes', 'flashcards']) {
+        if (db.objectStoreNames.contains(retired)) db.deleteObjectStore(retired);
+      }
+
+      // Active app-specific stores (keyed by id, no strict schema).
+      for (const extra of ['habits', 'todos', 'readings', 'breatheSessions', 'addictionCheckIns']) {
         if (!db.objectStoreNames.contains(extra)) {
           db.createObjectStore(extra, { keyPath: 'id' });
         }
@@ -85,7 +92,7 @@ export async function readKey<T>(store: string, key: string): Promise<T | undefi
  * if you supply an explicit key to one of these, so we strip it.
  */
 const INLINE_KEY_STORES = new Set<string>([STORE_INSTALLED, ...LOG_STORES,
-  'notes', 'habits', 'todos', 'flashcards', 'readings', 'breatheSessions', 'addictionCheckIns']);
+  'habits', 'todos', 'readings', 'breatheSessions', 'addictionCheckIns']);
 
 export async function writeRecord<T extends Row>(store: string, value: T, key?: string) {
   const db = await getDB();

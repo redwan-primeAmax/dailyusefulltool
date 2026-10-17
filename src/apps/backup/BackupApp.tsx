@@ -174,8 +174,8 @@ export function BackupApp(_props: BackupAppProps = {}) {
                     <li>Water logs: {lastBundle.stores.waterLogs?.length ?? 0}</li>
                     <li>Study sessions: {lastBundle.stores.studySessions?.length ?? 0}</li>
                     <li>Expense entries: {lastBundle.stores.expenses?.length ?? 0}</li>
-                    <li>Notes: {lastBundle.stores.notes?.length ?? 0} · Habits: {lastBundle.stores.habits?.length ?? 0}</li>
-                    <li>Tasks: {lastBundle.stores.todos?.length ?? 0} · Cards: {lastBundle.stores.flashcards?.length ?? 0}</li>
+                    <li>Habits: {lastBundle.stores.habits?.length ?? 0} · Tasks: {lastBundle.stores.todos?.length ?? 0}</li>
+                    <li>Recovery check-ins: {lastBundle.stores.addictionCheckIns?.length ?? 0}</li>
                     <li>Readings: {lastBundle.stores.readings?.length ?? 0} · Breathe: {lastBundle.stores.breatheSessions?.length ?? 0}</li>
                     <li>Profile: {profile.profileName} · {profile.profileAvatar ? 'avatar ✓' : 'no avatar'}</li>
                     <li>Goal (water): {water?.dailyTargetMl ?? '—'}ml</li>
@@ -248,7 +248,7 @@ export function BackupApp(_props: BackupAppProps = {}) {
         open={confirm === 'wipe'}
         tone="danger"
         title="Erase every app's data?"
-        description="Water logs, study sessions, expenses and device settings are permanently removed."
+        description="All app data, recovery check-ins, installed apps and device settings are permanently removed."
         confirmLabel="Erase everything"
         onCancel={() => setConfirm(null)}
         onConfirm={handleWipe}

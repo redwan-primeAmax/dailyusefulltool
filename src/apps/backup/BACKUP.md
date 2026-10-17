@@ -2,15 +2,18 @@
 
 ## Overview
 System-level data backup and restore utility. It creates a versioned JSON
-snapshot of all user data and restores it only after validation succeeds.
+snapshot of supported user data and restores it only after validation succeeds.
 
 ## Data Coverage
 The backup includes:
 - Device preferences, profile name, profile avatar emoji, and avatar image URL.
 - Installed app records.
-- Every app settings document.
-- Water logs, study sessions, expenses, notes, habits, To-Do tasks, flashcards,
-  custom readings, and breathing-session history.
+- Supported app settings documents.
+- Water logs, study sessions, expenses, habits, To-Do tasks, custom readings,
+  breathing-session history, and Addiction Remove recovery settings/check-ins.
+
+Recovery information is sensitive and is included in exported JSON files. Keep
+those files somewhere private. Browser-local data itself is not encrypted.
 
 ## Architecture
 | File | Responsibility |
@@ -24,13 +27,15 @@ The backup includes:
 | --- | --- |
 | Export | Builds and downloads `webos-backup-YYYY-MM-DD.json` |
 | Import | Selects a JSON file and confirms replacement before restoring |
-| Erase every app's data | Clears user data after confirmation |
+| Erase every app's data | Clears supported user data after confirmation |
 
 ## Restore Safety
 1. The JSON version and required structure are normalized first.
-2. Every row is validated for an `id` before any local store is cleared.
-3. Only then are stores cleared and rehydrated.
-4. The OS refreshes installed apps and device/profile state after restore.
+2. Every data row is validated for an `id` before any local store is cleared.
+3. Retired app records are filtered out; obsolete Notes and Flashcards stores are
+   not restored.
+4. Only then are supported stores cleared and rehydrated.
+5. The OS refreshes installed apps and device/profile state after restore.
 
 ## Routing
 - `main` → `BackupApp`

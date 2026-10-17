@@ -14,14 +14,11 @@ export type AppId =
   | 'expense'
   | 'backup'
   | 'calculator'
-  | 'notes'
   | 'habits'
   | 'pomodoro'
-  | 'currency'
   | 'bmi'
   | 'todo'
   | 'weather'
-  | 'flashcard'
   | 'breathe'
   | 'read'
   | 'memory'
@@ -120,18 +117,33 @@ export interface WaterSettings {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Addiction remover                                                  */
+/*  Addiction recovery support                                         */
 /* ------------------------------------------------------------------ */
+
+export type RecoveryMode = 'quit' | 'reduce' | 'explore';
 
 export interface AddictionGoal {
   id: string;
   name: string;
   category: string;
+  /** Preset key, when the target matches one of the built-in categories. */
+  presetId?: string;
   startTs: number;
-  targetDays: number; // typically 21
+  /** Legacy field retained so older local recovery plans still load. */
+  targetDays?: number;
+  mode?: RecoveryMode;
+  /** A personal change target, especially useful for reduction goals. */
+  planText?: string;
   reasons: string[];
+  triggers?: string[];
+  copingActions?: string[];
+  supportName?: string;
+  supportPhone?: string;
   active: boolean;
+  /** Lapses are information, not a score or a measure of worth. */
   relapses: number;
+  /** Kept for compatibility with earlier local plans. */
+  lastUseTs?: number;
 }
 
 export interface AddictionCheckIn {
@@ -139,9 +151,15 @@ export interface AddictionCheckIn {
   ts: number;
   dateKey: string;
   dayNumber: number;
-  mood: 'great' | 'good' | 'neutral' | 'struggling';
+  goalId?: string;
+  mode?: RecoveryMode;
+  mood: 'great' | 'good' | 'neutral' | 'struggling' | 'skipped';
+  cravingLevel?: number;
+  /** Whether the user's own goal was met; meaning depends on `mode`. */
+  goalMet?: boolean | null;
   note?: string;
-  cravingsResisted: number;
+  /** Legacy field retained for compatibility with older check-ins. */
+  cravingsResisted?: number;
 }
 
 export interface AddictionSettings {

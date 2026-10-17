@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileArchive, 
@@ -10,13 +10,11 @@ import {
   X,
   FileCode,
   CheckCircle2,
-  AlertCircle,
   ChevronUp
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { ScreenShell } from '../../components/ui/ScreenShell';
 import { CustomButton } from '../../components/CustomButton';
-import { Card } from '../../components/ui/Card';
 import { useOS } from '../../context/OSContext';
 import { cn } from '../../utils/cn';
 

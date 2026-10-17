@@ -66,9 +66,13 @@ export function AppDetail({ app, installed, progress, onInstall, onUninstall, on
               <h2 className="text-[22px] font-bold leading-tight text-emerald-50">{app.name}</h2>
               <p className="text-[12.5px] font-semibold text-emerald-400">{app.developer}</p>
               <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-200/60">
-                <span className="flex items-center gap-0.5 font-bold text-amber-400">
-                  <Star className="size-3 fill-amber-400" /> {app.rating}
-                </span>
+                {app.reviews === 'New' ? (
+                  <span className="font-bold text-emerald-300">New · no reviews</span>
+                ) : (
+                  <span className="flex items-center gap-0.5 font-bold text-amber-400">
+                    <Star className="size-3 fill-amber-400" /> {app.rating}
+                  </span>
+                )}
                 <span>·</span>
                 <span>{app.sizeMb} MB</span>
                 <span>·</span>
@@ -116,7 +120,7 @@ export function AppDetail({ app, installed, progress, onInstall, onUninstall, on
         {/* Stats strip */}
         <div className="mt-6 border-y border-emerald-500/10 bg-emerald-900/10 px-4 py-3 grid grid-cols-4 text-center">
           {[
-            { v: `${app.rating}`, l: 'Rating', sub: app.reviews, icon: true },
+            { v: app.reviews === 'New' ? 'New' : `${app.rating}`, l: 'Rating', sub: app.reviews === 'New' ? 'No reviews yet' : app.reviews, icon: app.reviews !== 'New' },
             { v: app.sizeMb, l: 'Size', sub: 'MB' },
             { v: app.installs, l: 'Downloads' },
             { v: app.version, l: 'Version' },
@@ -166,34 +170,40 @@ export function AppDetail({ app, installed, progress, onInstall, onUninstall, on
         {/* Ratings bar */}
         <section className="space-y-2 px-4 pt-6">
           <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] text-emerald-400/80">Ratings & reviews</h3>
-          <div className="flex items-center gap-5 py-2">
-            <div className="text-center">
-              <p className="text-[36px] font-light leading-none text-emerald-50">{app.rating}</p>
-              <div className="mt-1 flex gap-0.5 justify-center">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`size-3 ${i < Math.round(app.rating) ? 'fill-amber-400 text-amber-400' : 'text-emerald-900'}`}
-                  />
+          {app.reviews === 'New' ? (
+            <p className="rounded-2xl border border-emerald-400/10 bg-emerald-900/10 p-4 text-[12px] leading-relaxed text-emerald-100/65">
+              This app is new to the store. There are no user ratings or reviews yet.
+            </p>
+          ) : (
+            <div className="flex items-center gap-5 py-2">
+              <div className="text-center">
+                <p className="text-[36px] font-light leading-none text-emerald-50">{app.rating}</p>
+                <div className="mt-1 flex justify-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`size-3 ${i < Math.round(app.rating) ? 'fill-amber-400 text-amber-400' : 'text-emerald-900'}`}
+                    />
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] text-emerald-300/60">{app.reviews} reviews</p>
+              </div>
+              <div className="flex-1 space-y-1">
+                {[92, 6, 1, 0.6, 0.4].map((w, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-1 text-[9px] text-emerald-300/60">{5 - i}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-emerald-900/40">
+                      <div className="h-full rounded-full bg-emerald-400" style={{ width: `${w}%` }} />
+                    </div>
+                  </div>
                 ))}
               </div>
-              <p className="mt-1 text-[10px] text-emerald-300/60">{app.reviews} reviews</p>
             </div>
-            <div className="flex-1 space-y-1">
-              {[92, 6, 1, 0.6, 0.4].map((w, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-[9px] w-1 text-emerald-300/60">{5 - i}</span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-emerald-900/40">
-                    <div className="h-full rounded-full bg-emerald-400" style={{ width: `${w}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </section>
 
         <p className="px-4 pt-6 text-center text-[10.5px] text-emerald-300/40">
-          Google Play · Web OS · Verified safe
+          Web OS mini-app · Details provided by the app publisher
         </p>
       </div>
     </div>

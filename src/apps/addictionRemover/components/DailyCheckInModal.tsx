@@ -1,122 +1,176 @@
-import { useState } from 'react';
-import { Sparkles, Trophy } from 'lucide-react';
-import { Modal } from '../../../components/Modal';
+import { useEffect, useState } from 'react';
+import { Heart, Save, ShieldCheck } from 'lucide-react';
+import type { AddictionCheckIn, AddictionGoal } from '../../../types';
 import { CustomButton } from '../../../components/CustomButton';
-import { Stepper, TextField } from '../../../components/ui/controls';
+import { Modal } from '../../../components/Modal';
+import { Slider } from '../../../components/ui/controls';
+import type { DailyCheckInDraft } from '../useAddictionTracker';
+import { getGoalQuestion } from '../addictionModel';
 
-interface DailyCheckInModalProps {
-  open: boolean;
-  onClose: () => void;
-  dayNumber: number;
-  addictionName: string;
-  onSave: (mood: 'great' | 'good' | 'neutral' | 'struggling', note?: string, cravingsResisted?: number) => void;
-}
-
-const MOODS: { id: 'great' | 'good' | 'neutral' | 'struggling'; label: string; emoji: string; color: string }[] = [
-  { id: 'great', label: 'Empowered', emoji: '🔥', color: '#10b981' },
-  { id: 'good', label: 'Strong', emoji: '💪', color: '#0ea5e9' },
-  { id: 'neutral', label: 'Steady', emoji: '🧘', color: '#f59e0b' },
-  { id: 'struggling', label: 'Challenged', emoji: '🛡️', color: '#ef4444' },
+const MOODS: { id: AddictionCheckIn['mood']; label: string; emoji: string }[] = [
+  { id: 'great', label: 'Good', emoji: '🌤️' },
+  { id: 'good', label: 'Okay', emoji: '🙂' },
+  { id: 'neutral', label: 'Steady', emoji: '🌿' },
+  { id: 'struggling', label: 'Hard', emoji: '🌧️' },
+  { id: 'skipped', label: 'Skip', emoji: '—' },
 ];
+
+type CheckInOutcome = AddictionCheckIn['goalMet'];
 
 export function DailyCheckInModal({
   open,
   onClose,
+  profile,
+  existing,
   dayNumber,
-  addictionName,
   onSave,
-}: DailyCheckInModalProps) {
-  const [selectedMood, setSelectedMood] = useState<'great' | 'good' | 'neutral' | 'struggling'>('great');
-  const [cravingsCount, setCravingsCount] = useState(1);
-  const [journalNote, setJournalNote] = useState('');
+}: {
+  open: boolean;
+  onClose: () => void;
+  profile: AddictionGoal;
+  existing?: AddictionCheckIn;
+  dayNumber: number;
+  onSave: (draft: DailyCheckInDraft) => Promise<unknown> | unknown;
+}) {
+  const [mood, setMood] = useState<AddictionCheckIn['mood']>('skipped');
+  const [cravingLevel, setCravingLevel] = useState(0);
+  const [goalMet, setGoalMet] = useState<CheckInOutcome>(null);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const mode = profile.mode ?? 'quit';
 
-  const handleCommit = () => {
-    onSave(selectedMood, journalNote.trim() || undefined, cravingsCount);
-    setJournalNote('');
-    onClose();
+  useEffect(() => {
+    if (!open) return;
+    setMood(existing?.mood ?? 'skipped');
+    setCravingLevel(existing?.cravingLevel ?? 0);
+    setGoalMet(existing?.goalMet ?? null);
+    setNote(existing?.note ?? '');
+    setError('');
+  }, [open, existing]);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await onSave({ mood, cravingLevel, goalMet: goalMet ?? null, note: note.trim() || undefined });
+      onClose();
+    } catch {
+      setError('Your check-in could not be saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const question = getGoalQuestion(mode, profile.name);
+  const positiveAnswer = mode === 'explore' ? 'Yes, I did' : 'Yes, today';
+  const negativeAnswer = mode === 'explore' ? 'Not today' : 'Not today';
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       sheet
-      title={`Day ${dayNumber} Victory Check-In 🏆`}
-      description={`Record your daily victory remaining clean from ${addictionName}. Every day cements new neural pathways.`}
-      footer={
+      className="max-h-[88dvh] overflow-y-auto"
+      title={`Day ${dayNumber} check-in`}
+      description="A check-in is a moment to notice, not a test. Skip anything you do not want to answer."
+      footer={(
         <>
-          <CustomButton variant="ghost" fullWidth onClick={onClose}>
-            Cancel
-          </CustomButton>
-          <CustomButton
-            variant="success"
-            fullWidth
-            onClick={handleCommit}
-            leadingIcon={<Sparkles className="size-4" />}
-          >
-            Log Day {dayNumber} Clean!
+          <CustomButton variant="ghost" fullWidth onClick={onClose} disabled={saving}>Not now</CustomButton>
+          <CustomButton variant="success" fullWidth onClick={() => void save()} loading={saving} leadingIcon={<Save className="size-4" />}>
+            Save check-in
           </CustomButton>
         </>
-      }
+      )}
     >
-      <div className="space-y-4">
-        {/* Mood selection */}
-        <div>
-          <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-ink3">
-            How do you feel today?
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {MOODS.map((m) => {
-              const active = selectedMood === m.id;
+      <div className="space-y-5">
+        <section>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-ink3">How are you feeling?</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {MOODS.map((item) => {
+              const active = mood === item.id;
               return (
                 <button
-                  key={m.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => setSelectedMood(m.id)}
-                  className={`flex flex-col items-center gap-1 rounded-2xl border p-2.5 transition-all ${
-                    active
-                      ? 'border-emerald-500/50 bg-emerald-500/20 shadow-md scale-105'
-                      : 'border-hairline bg-surface3/60 hover:bg-surface3'
-                  }`}
+                  aria-pressed={active}
+                  onClick={() => setMood(item.id)}
+                  className={`flex flex-col items-center gap-1 rounded-2xl border p-2 transition-colors ${active ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-hairline bg-surface3/45'}`}
                 >
-                  <span className="text-[24px]">{m.emoji}</span>
-                  <span className={`text-[11px] font-bold ${active ? 'text-ink' : 'text-ink3'}`}>
-                    {m.label}
-                  </span>
+                  <span className="text-[22px]" aria-hidden="true">{item.emoji}</span>
+                  <span className="text-[10px] font-semibold text-ink2">{item.label}</span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* Cravings Resisted */}
-        <div className="flex items-center justify-between rounded-2xl border border-hairline bg-surface3/60 p-3.5">
-          <div>
-            <p className="text-[13px] font-bold text-ink">Cravings Resisted Today</p>
-            <p className="text-[11px] text-ink3">Each urge resisted strengthens self-control</p>
+        <section className="rounded-2xl border border-hairline bg-surface3/40 p-3.5">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-bold text-ink">How strong was the urge?</p>
+              <p className="text-[10.5px] text-ink3">Optional · 0 is none, 10 is very strong</p>
+            </div>
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-[14px] font-black tabular-nums text-amber-300">{cravingLevel}</span>
           </div>
-          <Stepper
-            value={cravingsCount}
-            min={0}
-            max={50}
-            step={1}
-            suffix=" urges"
-            onChange={setCravingsCount}
+          <Slider value={cravingLevel} onChange={setCravingLevel} min={0} max={10} ariaLabel="Urge strength from zero to ten" />
+        </section>
+
+        <section>
+          <p className="mb-2 text-[12px] font-bold text-ink">{question}</p>
+          {profile.planText && <p className="mb-2 rounded-xl bg-surface3/45 p-2.5 text-[11px] leading-relaxed text-ink3">My next goal: {profile.planText}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: true, label: positiveAnswer },
+              { value: false, label: negativeAnswer },
+            ].map((option) => {
+              const active = goalMet === option.value;
+              return (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setGoalMet(option.value)}
+                  className={`rounded-2xl border px-3 py-3 text-[11.5px] font-bold transition-colors ${active ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200' : 'border-hairline bg-surface3/40 text-ink2'}`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" onClick={() => setGoalMet(null)} className={`mt-2 w-full rounded-xl px-3 py-2 text-[10.5px] font-semibold ${goalMet === null ? 'bg-surface3 text-ink2' : 'text-ink3'}`}>
+            Skip this question
+          </button>
+          {mode === 'quit' && goalMet === false && (
+            <div className="mt-2 flex items-start gap-2 rounded-xl bg-sky-500/[0.08] p-3 text-[11px] leading-relaxed text-sky-100/80">
+              <Heart className="mt-0.5 size-4 shrink-0 text-sky-300" />
+              A lapse does not erase your progress. If useful, note what was happening and choose one safe next step.
+            </div>
+          )}
+        </section>
+
+        <label className="block">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-ink3">Anything you want to remember? (optional)</span>
+          <textarea
+            name="recovery-checkin-note"
+            autoComplete="off"
+            autoCorrect="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
+            rows={3}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="A thought, a trigger, or something that helped…"
+            className="w-full resize-none rounded-2xl border border-hairline bg-surface3/60 px-4 py-3 text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink3 focus:border-accent/60"
           />
-        </div>
+        </label>
 
-        {/* Daily reflection note */}
-        <TextField
-          label="Daily Reflection / Victory Notes (optional)"
-          placeholder="e.g. Felt a slight craving around 3 PM, drank water and took a walk. Proud of my discipline!"
-          value={journalNote}
-          onChange={setJournalNote}
-        />
-
-        <div className="flex items-center gap-2 rounded-2xl bg-emerald-500/10 p-3 text-[12px] font-medium text-emerald-300">
-          <Trophy className="size-4 shrink-0 text-emerald-400" />
-          <span>Keep up the streak! You are 1 day closer to completing your 21-Day Challenge.</span>
-        </div>
+        {error && <p role="alert" className="text-[11px] font-medium text-red-300">{error}</p>}
+        <p className="flex items-start gap-2 text-[10.5px] leading-relaxed text-ink3">
+          <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-400" />
+          This stays in this browser unless you export a device backup. You can clear it in Settings.
+        </p>
       </div>
     </Modal>
   );
