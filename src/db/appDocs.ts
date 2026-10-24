@@ -35,9 +35,9 @@ export const APP_DOCS: AppDocEntry[] = [
   { id: 'weather', title: 'Weather', path: 'apps/weather/WEATHER.md' },
   {
     id: 'addiction',
-    title: 'আসক্তি চ্যালেঞ্জ',
+    title: 'Addiction Challenge',
     path: 'apps/addictionRemover/ADDICTION-REMOVE.md',
-    content: `# আসক্তি চ্যালেঞ্জ\n\nযে কোনো অভ্যাস বা আসক্তি বদলাতে ৭, ১৪ বা ২২ দিনের বাংলা চ্যালেঞ্জ বেছে নাও। নাম লেখার পর হোম স্ক্রিনে লাইভ কাউন্টডাউন, দিনের অগ্রগতি এবং প্রতিদিন আলাদা বার্তা দেখাবে। সময় সেকেন্ড, মিনিট, ঘণ্টা অথবা দিন-ঘণ্টা-মিনিট-সেকেন্ডে দেখা যায়।\n\nমাদক বা ওষুধ হঠাৎ বন্ধ করা বিপজ্জনক হতে পারে। প্রয়োজন হলে চিকিৎসক বা বিশ্বস্ত কারও সাহায্য নাও—এই অ্যাপ চিকিৎসার বিকল্প নয়।\n\nচ্যালেঞ্জের তথ্য এই ব্রাউজারের IndexedDB-তে থাকে। পুরোনো পরিকল্পনার ব্যাকআপ থেকে আগের তথ্য নতুন চ্যালেঞ্জে ফেরত আসে না।\n`,
+    content: `# Addiction Challenge\n\nA personal habit-change challenge with 7-, 14-, or 22-day durations. Choose a challenge length, enter a habit or addiction name, and follow a live countdown, progress indicator, and a different supportive message each day. Countdown choices include seconds, minutes, hours, and a days-hours-minutes-seconds display.\n\n## Safety\nSuddenly stopping drugs or medication can be dangerous. Talk with a qualified clinician or someone you trust. This app is not a substitute for medical care.\n\n## Privacy and storage\nThe challenge name, duration, and display preference are stored in this browser's IndexedDB and are not sent to a server. A device backup may include the current challenge settings.\n`,
   },
   { id: 'bmi', title: 'BMI Calculator', path: 'apps/bmi/BMI.md' },
   { id: 'memory', title: 'Memory Match', path: 'apps/games/MEMORY.md' },
@@ -65,6 +65,12 @@ The live report includes word and character counts (with and without whitespace)
 ## Privacy and state
 Text is analyzed in memory and is not uploaded or saved. Paste and Copy report use the browser clipboard only after a user action. There is no app data store or settings screen.
 `,
+  },
+  {
+    id: 'pdftoimages',
+    title: 'PDF to Images Converter',
+    path: 'apps/pdfToImages/PDF-TO-IMAGES.md',
+    content: `# PDF to Images Converter\n\n## Overview\nConvert every page in a selected PDF into an individual PNG or JPEG image and download the images in a ZIP archive. PDF rendering and ZIP creation run locally in the browser.\n\n## Workflow\n1. Choose a PDF file.\n2. Select PNG or JPEG and a render scale.\n3. Press **Process PDF** to render every page sequentially.\n4. Follow the percentage progress indicator, then download the ZIP.\n\n## Naming and performance\nImages are named \`page_1.png\`, \`page_2.png\`, and so on. When necessary, page numbers are zero-padded (for example, \`page_01.png\`) so alphabetical file listings remain in numeric order. Pages render one at a time using a reusable canvas, and generated images are stored without recompression to limit CPU and memory use.\n`,
   },
   {
     id: 'zipprocessor',

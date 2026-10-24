@@ -184,8 +184,8 @@ function Device() {
               { emoji: '🧮', text: 'Calculator, To-Do & Habit Tracker' },
               { emoji: '🍅', text: 'Pomodoro focus timer & guided breathing' },
               { emoji: '🌤️', text: 'Weather, BMI & reading tools' },
-              { emoji: '🤝', text: 'আসক্তি চ্যালেঞ্জ — বাংলা কাউন্টডাউন ও বার্তা' },
-              { emoji: '📝', text: 'Word Counter, ZIP Processor & data tools' },
+              { emoji: '🤝', text: 'Addiction Challenge — countdown and daily guidance' },
+              { emoji: '📝', text: 'PDF to Images, Word Counter & ZIP Processor' },
               { emoji: '💾', text: 'Full data backup & restore' },
             ].map(({ emoji, text }) => (
               <div key={text} className="flex items-start gap-2.5 text-[12.5px] text-white/60">

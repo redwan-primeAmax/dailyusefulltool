@@ -3,7 +3,7 @@ import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import type { ChallengeDifficulty } from '../../../types';
 import { CustomButton } from '../../../components/CustomButton';
 import { TextField } from '../../../components/ui/controls';
-import { CHALLENGE_OPTIONS, toBanglaDigits } from '../addictionModel';
+import { CHALLENGE_OPTIONS } from '../addictionModel';
 import { HealthSafetyCard } from './HealthSafetyCard';
 
 export function ChallengeSetup({
@@ -22,21 +22,21 @@ export function ChallengeSetup({
         <div className="pointer-events-none absolute -right-12 -top-10 size-40 rounded-full bg-emerald-400/15 blur-3xl" />
         <div className="relative">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1 text-[10px] font-bold text-emerald-300">
-            <ShieldCheck className="size-3.5" /> তোমার ব্যক্তিগত চ্যালেঞ্জ
+            <ShieldCheck className="size-3.5" /> Your personal recovery challenge
           </span>
           <h2 className="mt-3 max-w-[300px] text-[25px] font-black leading-tight tracking-tight text-ink">
-            পরিবর্তনের পথে আজই শুরু হোক।
+            Start building a change today.
           </h2>
           <p className="mt-2 max-w-[310px] text-[12.5px] leading-relaxed text-ink2">
-            প্রথমে সময় বেছে নাও, তারপর যে অভ্যাসটি বদলাতে চাও তার নাম লেখো।
+            Choose a challenge length, then enter the habit or addiction you want to change.
           </p>
         </div>
       </section>
 
       <section className="card space-y-3 p-4">
         <div>
-          <p className="text-[14px] font-bold text-ink">১. চ্যালেঞ্জ বেছে নাও</p>
-          <p className="mt-0.5 text-[11.5px] text-ink3">নিজের জন্য মানানসই সময় দিয়ে শুরু করো।</p>
+          <p className="text-[14px] font-bold text-ink">1. Choose a challenge length</p>
+          <p className="mt-0.5 text-[11.5px] text-ink3">Start with a duration that feels manageable.</p>
         </div>
         <div className="space-y-2">
           {CHALLENGE_OPTIONS.map((option) => {
@@ -57,13 +57,12 @@ export function ChallengeSetup({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <span className="text-[14px] font-extrabold text-ink">{option.title}</span>
-                    <span className="text-[9px] font-bold tracking-[0.12em] text-ink3">{option.englishTitle}</span>
                   </span>
                   <span className="mt-0.5 block text-[11px] text-ink3">{option.description}</span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end">
                   <span className="text-[16px] font-black tabular-nums text-ink">
-                    {toBanglaDigits(option.durationDays)} <span className="text-[11px] font-semibold text-ink3">দিন</span>
+                    {option.durationDays.toLocaleString('en-US')} <span className="text-[11px] font-semibold text-ink3">days</span>
                   </span>
                   {active && <Check className="mt-1 size-4 text-emerald-300" />}
                 </span>
@@ -76,12 +75,12 @@ export function ChallengeSetup({
       {selected && (
         <section className="card space-y-3 p-4">
           <div>
-            <p className="text-[14px] font-bold text-ink">২. কী বদলাতে চাও?</p>
-            <p className="mt-0.5 text-[11.5px] text-ink3">নামটি শুধু এই ডিভাইসেই সেভ থাকবে।</p>
+            <p className="text-[14px] font-bold text-ink">2. What would you like to change?</p>
+            <p className="mt-0.5 text-[11.5px] text-ink3">Your challenge details stay on this device.</p>
           </div>
           <TextField
-            label="অভ্যাস বা আসক্তির নাম"
-            placeholder="যেমন: ধূমপান, জুয়া, অতিরিক্ত স্ক্রলিং"
+            label="Habit or addiction"
+            placeholder="For example: smoking, gambling, excessive scrolling"
             value={name}
             onChange={setName}
           />
@@ -92,7 +91,7 @@ export function ChallengeSetup({
             trailingIcon={<ArrowRight className="size-4" />}
             onClick={() => selected && name.trim() && onStart(selected.id, name.trim())}
           >
-            চ্যালেঞ্জ শুরু করো
+            Start challenge
           </CustomButton>
         </section>
       )}

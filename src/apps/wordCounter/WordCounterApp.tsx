@@ -5,7 +5,7 @@ import { ScreenShell } from '../../components/ui/ScreenShell';
 import { useOS } from '../../context/OSContext';
 import { analyzeText, createStatsReport, formatDuration } from './wordCounterModel';
 
-const SAMPLE_TEXT = `বাংলা ও English text—দুটোই এখানে পরীক্ষা করা যাবে। Paste your writing, or type something new, and watch every statistic update instantly. একটি বাক্য। Another sentence!`;
+const SAMPLE_TEXT = 'This sample includes a short paragraph. Type or paste your own writing to see every statistic update instantly. This counter tracks words, characters, sentences, and more!';
 
 interface StatCardProps {
   label: string;
@@ -123,7 +123,7 @@ export function WordCounterApp() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.17em] text-emerald-200/70">Text analysis</p>
               <h2 className="mt-1 text-xl font-black text-white">Every detail, at a glance.</h2>
-              <p className="mt-1 text-sm leading-5 text-slate-400">বাংলা, English, numbers, paragraphs—paste or type and see live results.</p>
+              <p className="mt-1 text-sm leading-5 text-slate-400">Paste or type text to see live word and writing statistics.</p>
             </div>
           </div>
           <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.07] pt-3 text-xs text-slate-400">
