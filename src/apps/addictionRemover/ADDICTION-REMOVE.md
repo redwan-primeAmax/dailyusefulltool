@@ -1,22 +1,22 @@
-# আসক্তি চ্যালেঞ্জ
+# Addiction Challenge
 
-## উদ্দেশ্য
-যে কোনো অভ্যাস বা আসক্তি বদলানোর জন্য একটি সহজ, ব্যক্তিগত বাংলা চ্যালেঞ্জ। অ্যাপ খুলে প্রথমে ৭ দিনের সহজ, ১৪ দিনের মাঝারি, অথবা ২২ দিনের কঠিন চ্যালেঞ্জ বেছে নিতে হয়; এরপর অভ্যাস বা আসক্তির নাম লিখে শুরু করা যায়।
+## Overview
+A personal habit-change challenge with 7-, 14-, or 22-day durations. Choose a challenge length, enter a habit or addiction name, and follow a live countdown, progress indicator, and a different supportive message each day.
 
-## প্রধান সুবিধা
-- হোম স্ক্রিনে চ্যালেঞ্জ শেষ হতে বাকি সময়ের লাইভ কাউন্টডাউন।
-- মোট সেকেন্ড, মোট মিনিট, মোট ঘণ্টা অথবা দিন-ঘণ্টা-মিনিট-সেকেন্ড—চার ধরনের সময় প্রদর্শন।
-- চ্যালেঞ্জের প্রতিটি দিনের জন্য আলাদা বাংলা বার্তা এবং অগ্রগতির সূচক।
-- নতুন চ্যালেঞ্জ বেছে নিলে বর্তমান কাউন্টডাউন ও দিন গণনা নতুন করে শুরু হয়।
+## Features
+- Choose an Easy 7-day, Medium 14-day, or Hard 22-day challenge.
+- View the countdown in seconds, minutes, hours, or a days-hours-minutes-seconds format.
+- See a daily message and progress indicator throughout the challenge.
+- Starting a new challenge resets the current countdown and day count.
 
-## নিরাপত্তা
-মাদক বা ওষুধ হঠাৎ বন্ধ করা বিপজ্জনক হতে পারে। প্রয়োজন হলে চিকিৎসক বা বিশ্বস্ত কারও সাহায্য নিন। এই অ্যাপ চিকিৎসার বিকল্প নয়।
+## Safety
+Suddenly stopping drugs or medication can be dangerous. Talk with a qualified clinician or someone you trust. This app is not a substitute for medical care.
 
-## গোপনীয়তা ও সংরক্ষণ
-চ্যালেঞ্জের নাম, সময় এবং প্রদর্শন পছন্দ এই ব্রাউজারের IndexedDB-তে থাকে; কোনো সার্ভারে পাঠানো হয় না। ডিভাইস ব্যাকআপে বর্তমান চ্যালেঞ্জ সেটিংস থাকতে পারে।
+## Privacy and storage
+The challenge name, duration, and display preference are stored in this browser's IndexedDB and are not sent to a server. A device backup may include the current challenge settings.
 
-## Routing ও data
+## Routing and data
 - `main` → `AddictionRemoverApp`
 - Settings key: `settings:addiction`
-- পুরোনো `addictionCheckIns` স্টোর DB v7 আপগ্রেডে মুছে ফেলা হয় এবং নতুন করে তৈরি হয় না।
-- পুরোনো recovery-plan ব্যাকআপ নতুন চ্যালেঞ্জ অ্যাপে পুনরুদ্ধার করা হয় না।
+- The retired `addictionCheckIns` store was removed during the DB v7 upgrade and is not recreated.
+- Legacy recovery-plan backups are not imported into this challenge app.

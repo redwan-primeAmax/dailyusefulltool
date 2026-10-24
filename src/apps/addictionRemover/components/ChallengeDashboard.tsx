@@ -16,7 +16,6 @@ import {
   getChallengeOption,
   getNormalCountdown,
   getRemainingMs,
-  toBanglaDigits,
 } from '../addictionModel';
 import { HealthSafetyCard } from './HealthSafetyCard';
 
@@ -28,16 +27,16 @@ const TIME_ICONS = {
 } satisfies Record<ChallengeTimeUnit, typeof Timer>;
 
 const NORMAL_UNITS = [
-  { key: 'days', label: 'দিন' },
-  { key: 'hours', label: 'ঘণ্টা' },
-  { key: 'minutes', label: 'মিনিট' },
-  { key: 'seconds', label: 'সেকেন্ড' },
+  { key: 'days', label: 'Days' },
+  { key: 'hours', label: 'Hours' },
+  { key: 'minutes', label: 'Minutes' },
+  { key: 'seconds', label: 'Seconds' },
 ] as const;
 
 const SINGLE_UNIT_LABELS: Record<Exclude<ChallengeTimeUnit, 'normal'>, string> = {
-  seconds: 'সেকেন্ড বাকি',
-  minutes: 'মিনিট বাকি',
-  hours: 'ঘণ্টা বাকি',
+  seconds: 'seconds remaining',
+  minutes: 'minutes remaining',
+  hours: 'hours remaining',
 };
 
 export function ChallengeDashboard({
@@ -67,15 +66,15 @@ export function ChallengeDashboard({
         <div className="relative">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1 text-[10px] font-bold text-emerald-300">
             {complete ? <Trophy className="size-3.5" /> : <Sparkles className="size-3.5" />}
-            {complete ? 'চ্যালেঞ্জ সম্পন্ন' : 'তোমার চ্যালেঞ্জ চলছে'}
+            {complete ? 'Challenge complete' : 'Your challenge is underway'}
           </span>
           <h2 className="mt-3 break-words text-[25px] font-black leading-tight tracking-tight text-ink">
             {challenge.name}
           </h2>
           <p className="mt-1 text-[12px] text-ink2">
             {complete
-              ? 'এই চ্যালেঞ্জের সময় শেষ হয়েছে।'
-              : `${challengeOption.title} · ${toBanglaDigits(challenge.durationDays)} দিনের চ্যালেঞ্জ`}
+              ? 'This challenge period has ended.'
+              : `${challengeOption.title} · ${challenge.durationDays.toLocaleString('en-US')}-day challenge`}
           </p>
         </div>
       </section>
@@ -83,12 +82,12 @@ export function ChallengeDashboard({
       <section className="card overflow-hidden p-4">
         <div className="text-center">
           <p className="text-[13px] font-bold text-ink">
-            {complete ? 'তোমার চ্যালেঞ্জের সময় শেষ' : 'চ্যালেঞ্জ শেষ হতে বাকি'}
+            {complete ? 'Your challenge period is complete' : 'Time remaining'}
           </p>
-          <p className="mt-1 text-[10.5px] text-ink3">সময় দেখানোর ধরন বেছে নাও</p>
+          <p className="mt-1 text-[10.5px] text-ink3">Choose a countdown display</p>
         </div>
 
-        <div className="mt-3 grid grid-cols-4 gap-1.5" role="group" aria-label="সময় দেখানোর ধরন">
+        <div className="mt-3 grid grid-cols-4 gap-1.5" role="group" aria-label="Countdown display format">
           {COUNTDOWN_OPTIONS.map((option) => {
             const Icon = TIME_ICONS[option.id];
             const active = displayUnit === option.id;
@@ -116,7 +115,7 @@ export function ChallengeDashboard({
             {NORMAL_UNITS.map((unit) => (
               <div key={unit.key} className="min-w-0 rounded-xl bg-surface3/50 px-1 py-3">
                 <p className="text-[21px] font-black leading-none tabular-nums text-ink sm:text-[25px]">
-                  {toBanglaDigits(normalCountdown[unit.key])}
+                  {normalCountdown[unit.key].toLocaleString('en-US')}
                 </p>
                 <p className="mt-1.5 text-[9px] font-medium text-ink3">{unit.label}</p>
               </div>
@@ -125,7 +124,7 @@ export function ChallengeDashboard({
         ) : (
           <div className="mt-4 rounded-2xl bg-surface3/50 px-3 py-5 text-center">
             <p className="break-all text-[40px] font-black leading-none tabular-nums tracking-tight text-ink sm:text-[48px]">
-              {toBanglaDigits(getCountdownValue(challenge, displayUnit, now).toLocaleString('en-US'))}
+              {getCountdownValue(challenge, displayUnit, now).toLocaleString('en-US')}
             </p>
             <p className="mt-2 text-[11px] font-medium text-ink3">
               {SINGLE_UNIT_LABELS[displayUnit]}
@@ -135,13 +134,13 @@ export function ChallengeDashboard({
 
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between text-[10.5px]">
-            <span className="font-semibold text-ink2">দিন {toBanglaDigits(day)} / {toBanglaDigits(challenge.durationDays)}</span>
-            <span className="text-ink3">{complete ? '১০০%' : `${toBanglaDigits(Math.floor(progress))}%`}</span>
+            <span className="font-semibold text-ink2">Day {day.toLocaleString('en-US')} / {challenge.durationDays.toLocaleString('en-US')}</span>
+            <span className="text-ink3">{complete ? '100%' : `${Math.floor(progress).toLocaleString('en-US')}%`}</span>
           </div>
           <div
             className="h-2 overflow-hidden rounded-full bg-surface3"
             role="progressbar"
-            aria-label="চ্যালেঞ্জের অগ্রগতি"
+            aria-label="Challenge progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={complete ? 100 : Math.floor(progress)}
@@ -159,7 +158,7 @@ export function ChallengeDashboard({
           <Sparkles className="size-[18px]" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300">আজকের বার্তা · দিন {toBanglaDigits(day)}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-300">Today's message · Day {day.toLocaleString('en-US')}</p>
           <p className="mt-1.5 text-[13px] font-semibold leading-relaxed text-ink">
             {getDailyMessage(day, challenge.durationDays)}
           </p>
@@ -169,7 +168,7 @@ export function ChallengeDashboard({
       <HealthSafetyCard />
 
       <CustomButton fullWidth variant="outline" onClick={onNewChallenge}>
-        নতুন চ্যালেঞ্জ বেছে নাও
+        Choose a new challenge
       </CustomButton>
     </div>
   );

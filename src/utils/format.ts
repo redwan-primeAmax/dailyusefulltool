@@ -39,7 +39,7 @@ export function formatMoney(amount: number, currency: string): string {
       /* fall through to custom-symbol formatting */
     }
   }
-  // Custom symbol / name (e.g. "৳", "BDT", "Taka") — prefix with thousands grouping.
+  // Custom symbol / name (e.g. "BDT", "Taka", "USD") — prefix with thousands grouping.
   const grouped = amount.toLocaleString(undefined, {
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,

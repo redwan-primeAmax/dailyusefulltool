@@ -126,7 +126,7 @@ export function ExpenseSettings() {
         <SettingsRow
           icon={<Wallet className="size-[17px]" />}
           label="Custom currency"
-          description={`Currently: ${settings.currency || '—'} · type any symbol or code (e.g. ৳, BDT, ₹, $)`}
+          description={`Currently: ${settings.currency || '—'} · type any symbol or code (e.g. BDT, INR, USD, EUR)`}
           control={
             <input
               type="text"

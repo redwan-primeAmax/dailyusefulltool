@@ -8,7 +8,6 @@ import type {
 export interface ChallengeOption {
   id: ChallengeDifficulty;
   title: string;
-  englishTitle: string;
   durationDays: ChallengeDurationDays;
   description: string;
   emoji: string;
@@ -17,66 +16,58 @@ export interface ChallengeOption {
 export const CHALLENGE_OPTIONS: ChallengeOption[] = [
   {
     id: 'easy',
-    title: 'সহজ',
-    englishTitle: 'EASY',
+    title: 'Easy',
     durationDays: 7,
-    description: '৭ দিনের ছোট শুরু',
+    description: 'A gentle one-week start',
     emoji: '🌱',
   },
   {
     id: 'medium',
-    title: 'মাঝারি',
-    englishTitle: 'MEDIUM',
+    title: 'Medium',
     durationDays: 14,
-    description: '১৪ দিনের ধারাবাহিক চেষ্টা',
+    description: 'Build momentum over two weeks',
     emoji: '🌿',
   },
   {
     id: 'hard',
-    title: 'কঠিন',
-    englishTitle: 'HARD',
+    title: 'Hard',
     durationDays: 22,
-    description: '২২ দিনের বড় লক্ষ্য',
+    description: 'A focused 22-day commitment',
     emoji: '🔥',
   },
 ];
 
 export const COUNTDOWN_OPTIONS: { id: ChallengeTimeUnit; label: string }[] = [
-  { id: 'seconds', label: 'সেকেন্ড' },
-  { id: 'minutes', label: 'মিনিট' },
-  { id: 'normal', label: 'স্বাভাবিক' },
-  { id: 'hours', label: 'ঘণ্টা' },
+  { id: 'seconds', label: 'Seconds' },
+  { id: 'minutes', label: 'Minutes' },
+  { id: 'normal', label: 'Standard' },
+  { id: 'hours', label: 'Hours' },
 ];
 
 export const DAILY_MESSAGES = [
-  'শুরু করেছ—এটাই আজকের বড় পদক্ষেপ।',
-  'আজ শুধু পরের ছোট সিদ্ধান্তটিতে মন দাও।',
-  'কঠিন লাগলে একটু থামো, পানি খাও, নিরাপদ কারও সঙ্গে কথা বলো।',
-  'যে পরিস্থিতি তোমাকে টানে, আজ তার থেকে একটু দূরত্ব তৈরি করো।',
-  'নিজের উদ্দেশ্য মনে করো—কেন এই পরিবর্তন শুরু করেছ?',
-  'একবারে পুরো পথ নয়; আজকের দিনটুকুই সামলাও।',
-  'প্রথম সপ্তাহের শেষ দিন—নিজের চেষ্টাকে স্বীকার করো।',
-  'নতুন সপ্তাহ, নতুন সুযোগ; আগের দিনগুলোর অভিজ্ঞতা কাজে লাগাও।',
-  'কোন সময়ে ইচ্ছেটা বাড়ে খেয়াল করো—খেয়াল করাটাও অগ্রগতি।',
-  'সহায়তা চাওয়া সাহসী পদক্ষেপ।',
-  'কঠিন মুহূর্তে লক্ষ্য ছোট করো—পরের দশ মিনিট দিয়ে শুরু করো।',
-  'আজ একটি নিরাপদ বিকল্প আগে থেকে ঠিক করে রাখো।',
-  'অগ্রগতি সবসময় সোজা পথে হয় না; আবার শুরু করা যায়।',
-  'দুই সপ্তাহের পথ—তুমি চেষ্টা চালিয়ে যাচ্ছ।',
-  'আজ নিজের চারপাশ থেকে একটি প্রলোভনের সংকেত সরিয়ে রাখো।',
-  'বিশ্বাসের কাউকে তোমার লক্ষ্যটা জানাও।',
-  'কঠিন অনুভূতি কিছু সময় থাকতে পারে; সাহায্য নেওয়া ঠিক আছে।',
-  'আজ নিজের প্রতি কঠোর না হয়ে পরের ভালো সিদ্ধান্তটি বেছে নাও।',
-  'তোমার পরিকল্পনা কাজ না করলে, সেটি বদলানো যায়।',
-  'বিশ্রাম ও নিরাপদ পরিবেশের যত্ন নাও।',
-  'আরেকটি দিন চেষ্টা—এটিও মূল্যবান।',
-  'শেষ দিনের চেষ্টা—আজও নিজের যত্নকে গুরুত্ব দাও।',
+  'Starting is already a meaningful step.',
+  'Focus on the next small decision.',
+  'If it feels difficult, pause, hydrate, and reach out to someone you trust.',
+  'Create a little distance today from a situation that may trigger an urge.',
+  'Remember why you chose to make this change.',
+  'You do not need to finish the whole journey today. Focus on today.',
+  'The first week is complete. Take a moment to recognize your effort.',
+  'A new week brings another chance to use what you have learned.',
+  'Notice when urges tend to appear. Awareness is progress.',
+  'Asking for support is a brave step.',
+  'Make the next step smaller. Start with the next ten minutes.',
+  'Choose one safe alternative you can turn to today.',
+  'Progress is not always a straight line. You can begin again.',
+  'You have kept going through two weeks. That effort matters.',
+  'Move one tempting cue out of your surroundings today.',
+  'Tell someone you trust about the goal you are working toward.',
+  'Difficult feelings can pass. It is okay to ask for help.',
+  'Be kind to yourself and choose the next helpful action.',
+  'If your plan is not working, you are allowed to adjust it.',
+  'Make rest and a safe environment part of your plan.',
+  'Trying for one more day is worthwhile.',
+  'On the final day, keep giving your wellbeing the attention it deserves.',
 ] as const;
-
-export function toBanglaDigits(value: number | string): string {
-  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-  return String(value).replace(/\d/g, (digit) => digits[Number(digit)]);
-}
 
 export function getChallengeDay(challenge: AddictionChallenge, nowTs = Date.now()): number {
   const elapsedDays = Math.max(0, Math.floor((nowTs - challenge.startTs) / 86_400_000));

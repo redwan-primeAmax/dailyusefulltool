@@ -1,6 +1,6 @@
 import {
   Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
-  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText,
+  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { StoreApp } from './store/StoreApp';
@@ -31,6 +31,7 @@ import { TriverSettings } from './triver/TriverSettings';
 import { TodoSettings } from './todo/TodoSettings';
 import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
 import { WordCounterApp } from './wordCounter/WordCounterApp';
+import { PdfToImagesApp } from './pdfToImages/PdfToImagesApp';
 import { AddictionRemoverApp } from './addictionRemover/AddictionRemoverApp';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
 
@@ -99,11 +100,12 @@ export const APP_CATALOG: AppManifest[] = [
 
   /* ───── APPS ───── */
   {
-    id: 'addiction', name: 'আসক্তি চ্যালেঞ্জ', shortName: 'চ্যালেঞ্জ', developer: 'Web OS Health',
-    category: 'Health', subcategory: 'Recovery', kind: 'app', version: '2.0.0', sizeMb: 9,
-    rating: 0, reviews: 'New', installs: '—', updatedAt: 25,
-    description: 'আসক্তি বা অভ্যাস বদলাতে ৭, ১৪ বা ২২ দিনের বাংলা চ্যালেঞ্জ—সহজ কাউন্টডাউন ও প্রতিদিনের অনুপ্রেরণামূলক বার্তাসহ।',
-    highlights: ['সহজ, মাঝারি ও কঠিন চ্যালেঞ্জ', 'সেকেন্ড, মিনিট, ঘণ্টা বা স্বাভাবিক কাউন্টডাউন', 'প্রতিদিন নতুন বাংলা বার্তা'],
+    id: 'addiction', name: 'Addiction Challenge', shortName: 'Challenge', developer: 'Web OS Health',
+    category: 'Health', subcategory: 'Recovery', kind: 'app', version: '2.1.0', sizeMb: 9,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 29,
+    description: 'Build a personal habit-change plan with 7-, 14-, or 22-day countdowns, progress tracking, and daily guidance.',
+    highlights: ['Choose a 7-, 14-, or 22-day challenge', 'View countdowns in seconds, minutes, hours, or days', 'Get a different supportive message each day'],
+
     accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: HeartHandshake, core: false,
     screens: [{ id: 'main', component: AddictionRemoverApp }],
   },
@@ -211,6 +213,15 @@ export const APP_CATALOG: AppManifest[] = [
     highlights: ['Live word and character counts', 'Sentences, paragraphs, lines and vocabulary stats', 'Reading, speaking and page estimates', 'Text is analyzed locally in your browser'],
     accent: '#34d399', gradient: 'from-emerald-400 to-teal-600', icon: FileText, core: false,
     screens: [{ id: 'main', component: WordCounterApp }],
+  },
+  {
+    id: 'pdftoimages', name: 'PDF to Images Converter', shortName: 'PDF Images', developer: 'Web OS Labs',
+    category: 'Tools', subcategory: 'Files', kind: 'app', version: '1.0.0', sizeMb: 16,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 30,
+    description: 'Render each PDF page as an ordered PNG or JPEG image and download all pages together in a ZIP.',
+    highlights: ['Convert every page separately', 'Track rendering and ZIP progress', 'Numerically sorted page filenames', 'Local, sequential rendering to limit memory use'],
+    accent: '#f97316', gradient: 'from-orange-400 to-rose-600', icon: FileImage, core: false,
+    screens: [{ id: 'main', component: PdfToImagesApp }],
   },
   {
     id: 'calculator', name: 'Calculator', shortName: 'Calc', developer: 'MathBox',

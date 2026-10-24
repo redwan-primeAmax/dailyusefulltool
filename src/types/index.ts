@@ -27,6 +27,7 @@ export type AppId =
   | 'triver'
   | 'zipprocessor'
   | 'wordcounter'
+  | 'pdftoimages'
   | 'addiction';
 
 export type ScreenId = 'main' | 'settings';

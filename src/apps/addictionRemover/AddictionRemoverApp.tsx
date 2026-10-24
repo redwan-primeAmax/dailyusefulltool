@@ -17,12 +17,12 @@ export function AddictionRemoverApp() {
     try {
       await tracker.startChallenge(difficulty, name);
       notify({
-        title: 'চ্যালেঞ্জ শুরু হয়েছে',
-        description: 'প্রতিটি দিনই একটি নতুন পদক্ষেপ।',
+        title: 'Challenge started',
+        description: 'Every day is a new step forward.',
         tone: 'success',
       });
     } catch {
-      notify({ title: 'সেভ করা যায়নি', description: 'আবার চেষ্টা করো।', tone: 'danger' });
+      notify({ title: 'Could not save the challenge', description: 'Please try again.', tone: 'danger' });
     }
   };
 
@@ -31,21 +31,21 @@ export function AddictionRemoverApp() {
       await tracker.resetChallenge();
       setConfirmNewChallenge(false);
     } catch {
-      notify({ title: 'চ্যালেঞ্জ বদলানো যায়নি', description: 'আবার চেষ্টা করো।', tone: 'danger' });
+      notify({ title: 'Could not reset the challenge', description: 'Please try again.', tone: 'danger' });
     }
   };
 
   return (
     <ScreenShell
-      title="আসক্তি চ্যালেঞ্জ"
-      subtitle={tracker.challenge ? 'তোমার ব্যক্তিগত চ্যালেঞ্জ' : 'আজই তোমার চ্যালেঞ্জ বেছে নাও'}
+      title="Addiction Challenge"
+      subtitle={tracker.challenge ? 'Your personal challenge' : 'Choose your challenge'}
       icon={<HeartHandshake className="size-[19px]" />}
       contentClassName="!space-y-0 !px-0 !pt-4"
     >
       {!tracker.settingsLoaded ? (
         <div className="px-4 py-16 text-center">
           <div className="mx-auto size-8 animate-pulse rounded-full bg-emerald-400/20" />
-          <p className="mt-3 text-[12px] text-ink3">তোমার চ্যালেঞ্জ খোলা হচ্ছে…</p>
+          <p className="mt-3 text-[12px] text-ink3">Loading your challenge…</p>
         </div>
       ) : tracker.challenge ? (
         <ChallengeDashboard
@@ -61,10 +61,10 @@ export function AddictionRemoverApp() {
 
       <ConfirmDialog
         open={confirmNewChallenge}
-        title="নতুন চ্যালেঞ্জ শুরু করবে?"
-        description="বর্তমান কাউন্টডাউন ও দিন গণনা মুছে যাবে। তোমার নতুন চ্যালেঞ্জ বেছে নেওয়ার পর আবার শুরু হবে।"
-        confirmLabel="নতুন চ্যালেঞ্জ"
-        cancelLabel="ফিরে যাও"
+        title="Start a new challenge?"
+        description="Your current countdown and day count will be reset. The new challenge will begin after you choose it."
+        confirmLabel="Start new challenge"
+        cancelLabel="Go back"
         tone="warning"
         onConfirm={() => void createNewChallenge()}
         onCancel={() => setConfirmNewChallenge(false)}
