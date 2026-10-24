@@ -14,8 +14,11 @@ if ('serviceWorker' in navigator) {
       window.location.reload();
     });
 
+    const appBaseUrl = new URL(import.meta.env.BASE_URL, document.baseURI);
+    const appScope = appBaseUrl.pathname.endsWith('/') ? appBaseUrl.pathname : `${appBaseUrl.pathname}/`;
+
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+      .register(new URL('sw.js', appBaseUrl), { scope: appScope, updateViaCache: 'none' })
       .then((registration) => {
         console.info('[assets] Network-only service worker active.');
         void registration.update().catch((error: unknown) => {

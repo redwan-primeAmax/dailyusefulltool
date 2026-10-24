@@ -40,6 +40,7 @@ src/
 7. **Autofill** — every input declares `type`, `name`, `autoComplete`, and password-manager opt-outs (`data-1p-ignore`, `data-lpignore`, `data-form-type`).
 8. **Retired apps and data** — startup migration removes obsolete installs/settings; v7 dropped Notes, Flashcards, and legacy addiction check-ins, while v8 removes the retired Study Tracker sessions. Backups never restore retired apps or data.
 9. **Fresh assets** — the service worker forwards GET requests to the network with `cache: 'no-store'`, never reads/writes CacheStorage, and purges legacy caches on activation. IndexedDB remains for user data only.
+10. **Startup bundle** — app screens are lazy-loaded by `registry.tsx` and rendered inside `Suspense`; keep Vite code splitting enabled so unopened apps do not block launch. The service worker remains network-only.
 
 ## Shared conventions
 - **Danger Zone** — every Settings screen ends with `<DangerZone />` for destructive actions.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { OSProvider, useOS } from './context/OSContext';
 import { ReaderSessionProvider } from './context/ReaderSessionContext';
@@ -40,7 +40,15 @@ function AppScreen({ route }: { route: OSRoute }) {
   const Component = screen.component;
   return (
     <ErrorBoundary name={manifest.name}>
-      <Component />
+      <Suspense
+        fallback={(
+          <div className="flex h-full items-center justify-center bg-surface text-[13px] text-ink3" aria-live="polite">
+            Loading {manifest.shortName}…
+          </div>
+        )}
+      >
+        <Component />
+      </Suspense>
     </ErrorBoundary>
   );
 }
@@ -56,7 +64,7 @@ function Device() {
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setBooting(false), 1600);
+    const timer = window.setTimeout(() => setBooting(false), 650);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -141,7 +149,7 @@ function Device() {
                 className="h-1.5 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
-                transition={{ duration: 1.4, ease: 'easeInOut' }}
+                transition={{ duration: 0.55, ease: 'easeInOut' }}
               />
             </div>
             <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-white/35">

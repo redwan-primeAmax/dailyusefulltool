@@ -1,39 +1,52 @@
+import { lazy, type ComponentType } from 'react';
 import {
   Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
   GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
-import { StoreApp } from './store/StoreApp';
-import { StoreSettings } from './store/StoreSettings';
-import { WaterTracker } from './waterTracker/WaterTracker';
-import { WaterSettings } from './waterTracker/WaterSettings';
-import { ExamTrackerApp } from './examTracker/ExamTrackerApp';
-import { ExpenseTracker } from './expenseTracker/ExpenseTracker';
-import { ExpenseSettings } from './expenseTracker/ExpenseSettings';
-import { BackupApp } from './backup/BackupApp';
-import { CalculatorApp } from './calculator/CalculatorApp';
-import { HabitsApp } from './habits/HabitsApp';
-import { HabitsSettings } from './habits/HabitsSettings';
-import { PomodoroApp } from './pomodoro/PomodoroApp';
-import { PomodoroSettings } from './pomodoro/PomodoroSettings';
-import { MemoryGame, MemorySettings, MathDash, MathSettings } from './games';
-import { BmiApp } from './bmi/BmiApp';
-import { TodoApp } from './todo/TodoApp';
-import { WeatherApp } from './weather/WeatherApp';
-import { BreatheApp } from './breathe/BreatheApp';
-import { BreatheSettings } from './breathe/BreatheSettings';
-import { ReadApp } from './read/ReadApp';
-import { ReadSettings } from './read/ReadSettings';
-import { ReaderApp } from './reader/ReaderApp';
-import { ReaderSettings } from './reader/ReaderSettings';
-import { TriverApp } from './triver/TriverApp';
-import { TriverSettings } from './triver/TriverSettings';
-import { TodoSettings } from './todo/TodoSettings';
-import { ZipProcessorApp } from './zipProcessor/ZipProcessorApp';
-import { WordCounterApp } from './wordCounter/WordCounterApp';
-import { PdfToImagesApp } from './pdfToImages/PdfToImagesApp';
-import { AddictionRemoverApp } from './addictionRemover/AddictionRemoverApp';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
+
+/** Keep app code out of the startup bundle until that screen is first opened. */
+function lazyScreen(load: () => Promise<{ default: ComponentType }>): ComponentType {
+  const DeferredScreen = lazy(load);
+  return function LazyAppScreen() {
+    return <DeferredScreen />;
+  };
+}
+
+const StoreApp = lazyScreen(() => import('./store/StoreApp').then(({ StoreApp }) => ({ default: StoreApp })));
+const StoreSettings = lazyScreen(() => import('./store/StoreSettings').then(({ StoreSettings }) => ({ default: StoreSettings })));
+const WaterTracker = lazyScreen(() => import('./waterTracker/WaterTracker').then(({ WaterTracker }) => ({ default: WaterTracker })));
+const WaterSettings = lazyScreen(() => import('./waterTracker/WaterSettings').then(({ WaterSettings }) => ({ default: WaterSettings })));
+const ExamTrackerApp = lazyScreen(() => import('./examTracker/ExamTrackerApp').then(({ ExamTrackerApp }) => ({ default: ExamTrackerApp })));
+const ExpenseTracker = lazyScreen(() => import('./expenseTracker/ExpenseTracker').then(({ ExpenseTracker }) => ({ default: ExpenseTracker })));
+const ExpenseSettings = lazyScreen(() => import('./expenseTracker/ExpenseSettings').then(({ ExpenseSettings }) => ({ default: ExpenseSettings })));
+const BackupApp = lazyScreen(() => import('./backup/BackupApp').then(({ BackupApp }) => ({ default: BackupApp })));
+const CalculatorApp = lazyScreen(() => import('./calculator/CalculatorApp').then(({ CalculatorApp }) => ({ default: CalculatorApp })));
+const HabitsApp = lazyScreen(() => import('./habits/HabitsApp').then(({ HabitsApp }) => ({ default: HabitsApp })));
+const HabitsSettings = lazyScreen(() => import('./habits/HabitsSettings').then(({ HabitsSettings }) => ({ default: HabitsSettings })));
+const PomodoroApp = lazyScreen(() => import('./pomodoro/PomodoroApp').then(({ PomodoroApp }) => ({ default: PomodoroApp })));
+const PomodoroSettings = lazyScreen(() => import('./pomodoro/PomodoroSettings').then(({ PomodoroSettings }) => ({ default: PomodoroSettings })));
+const MemoryGame = lazyScreen(() => import('./games').then(({ MemoryGame }) => ({ default: MemoryGame })));
+const MemorySettings = lazyScreen(() => import('./games').then(({ MemorySettings }) => ({ default: MemorySettings })));
+const MathDash = lazyScreen(() => import('./games').then(({ MathDash }) => ({ default: MathDash })));
+const MathSettings = lazyScreen(() => import('./games').then(({ MathSettings }) => ({ default: MathSettings })));
+const BmiApp = lazyScreen(() => import('./bmi/BmiApp').then(({ BmiApp }) => ({ default: BmiApp })));
+const TodoApp = lazyScreen(() => import('./todo/TodoApp').then(({ TodoApp }) => ({ default: TodoApp })));
+const WeatherApp = lazyScreen(() => import('./weather/WeatherApp').then(({ WeatherApp }) => ({ default: WeatherApp })));
+const BreatheApp = lazyScreen(() => import('./breathe/BreatheApp').then(({ BreatheApp }) => ({ default: BreatheApp })));
+const BreatheSettings = lazyScreen(() => import('./breathe/BreatheSettings').then(({ BreatheSettings }) => ({ default: BreatheSettings })));
+const ReadApp = lazyScreen(() => import('./read/ReadApp').then(({ ReadApp }) => ({ default: ReadApp })));
+const ReadSettings = lazyScreen(() => import('./read/ReadSettings').then(({ ReadSettings }) => ({ default: ReadSettings })));
+const ReaderApp = lazyScreen(() => import('./reader/ReaderApp').then(({ ReaderApp }) => ({ default: ReaderApp })));
+const ReaderSettings = lazyScreen(() => import('./reader/ReaderSettings').then(({ ReaderSettings }) => ({ default: ReaderSettings })));
+const TriverApp = lazyScreen(() => import('./triver/TriverApp').then(({ TriverApp }) => ({ default: TriverApp })));
+const TriverSettings = lazyScreen(() => import('./triver/TriverSettings').then(({ TriverSettings }) => ({ default: TriverSettings })));
+const TodoSettings = lazyScreen(() => import('./todo/TodoSettings').then(({ TodoSettings }) => ({ default: TodoSettings })));
+const ZipProcessorApp = lazyScreen(() => import('./zipProcessor/ZipProcessorApp').then(({ ZipProcessorApp }) => ({ default: ZipProcessorApp })));
+const WordCounterApp = lazyScreen(() => import('./wordCounter/WordCounterApp').then(({ WordCounterApp }) => ({ default: WordCounterApp })));
+const PdfToImagesApp = lazyScreen(() => import('./pdfToImages/PdfToImagesApp').then(({ PdfToImagesApp }) => ({ default: PdfToImagesApp })));
+const AddictionRemoverApp = lazyScreen(() => import('./addictionRemover/AddictionRemoverApp').then(({ AddictionRemoverApp }) => ({ default: AddictionRemoverApp })));
 
 function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
