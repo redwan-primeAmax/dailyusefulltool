@@ -1,7 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import {
   Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
-  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage,
+  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage, Volume2,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
@@ -46,6 +46,7 @@ const TodoSettings = lazyScreen(() => import('./todo/TodoSettings').then(({ Todo
 const ZipProcessorApp = lazyScreen(() => import('./zipProcessor/ZipProcessorApp').then(({ ZipProcessorApp }) => ({ default: ZipProcessorApp })));
 const WordCounterApp = lazyScreen(() => import('./wordCounter/WordCounterApp').then(({ WordCounterApp }) => ({ default: WordCounterApp })));
 const PdfToImagesApp = lazyScreen(() => import('./pdfToImages/PdfToImagesApp').then(({ PdfToImagesApp }) => ({ default: PdfToImagesApp })));
+const TextToSpeechApp = lazyScreen(() => import('./textToSpeech/TextToSpeechApp').then(({ TextToSpeechApp }) => ({ default: TextToSpeechApp })));
 const AddictionRemoverApp = lazyScreen(() => import('./addictionRemover/AddictionRemoverApp').then(({ AddictionRemoverApp }) => ({ default: AddictionRemoverApp })));
 
 function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -235,6 +236,15 @@ export const APP_CATALOG: AppManifest[] = [
     highlights: ['Convert every page separately', 'Track rendering and ZIP progress', 'Numerically sorted page filenames', 'Local, sequential rendering to limit memory use'],
     accent: '#f97316', gradient: 'from-orange-400 to-rose-600', icon: FileImage, core: false,
     screens: [{ id: 'main', component: PdfToImagesApp }],
+  },
+  {
+    id: 'texttospeech', name: 'Text to Speech', shortName: 'Speech', developer: 'Web OS Labs',
+    category: 'Tools', subcategory: 'Accessibility', kind: 'app', version: '1.0.0', sizeMb: 3,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 31,
+    description: 'Paste Bengali or English text, open a player, and listen through a free online voice with a browser voice fallback.',
+    highlights: ['Press Done to open the audio player', 'Automatically detects Bengali and English script', 'Free online voice with no API key', 'Browser voice fallback when available'],
+    accent: '#8b5cf6', gradient: 'from-violet-400 to-indigo-600', icon: Volume2, core: false,
+    screens: [{ id: 'main', component: TextToSpeechApp }],
   },
   {
     id: 'calculator', name: 'Calculator', shortName: 'Calc', developer: 'MathBox',

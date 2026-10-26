@@ -28,6 +28,7 @@ export type AppId =
   | 'zipprocessor'
   | 'wordcounter'
   | 'pdftoimages'
+  | 'texttospeech'
   | 'addiction';
 
 export type ScreenId = 'main' | 'settings';
