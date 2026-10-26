@@ -73,6 +73,12 @@ Text is analyzed in memory and is not uploaded or saved. Paste and Copy report u
     content: `# PDF to Images Converter\n\n## Overview\nConvert every page in a selected PDF into an individual PNG or JPEG image and download the images in a ZIP archive. PDF rendering and ZIP creation run locally in the browser.\n\n## Workflow\n1. Choose a PDF file.\n2. Select PNG or JPEG and a render scale.\n3. Press **Process PDF** to render every page sequentially.\n4. Follow the percentage progress indicator, then download the ZIP.\n\n## Naming and performance\nImages are named \`page_1.png\`, \`page_2.png\`, and so on. When necessary, page numbers are zero-padded (for example, \`page_01.png\`) so alphabetical file listings remain in numeric order. Pages render one at a time using a reusable canvas, and generated images are stored without recompression to limit CPU and memory use.\n`,
   },
   {
+    id: 'texttospeech',
+    title: 'Text to Speech',
+    path: 'apps/textToSpeech/TEXT-TO-SPEECH.md',
+    content: `# Text to Speech\n\n## Overview\nPaste Bengali or English text, press **Done** to open the player, then play, pause, resume, replay, or stop the reading. Auto-detect splits Bengali-script and Latin-script passages and assigns a matching language code.\n\n## Voice and limitations\nThe keyless online voice uses Google Translate's public, unofficial listen endpoint and returns short MP3 segments for broad browser audio support. It is best-effort, may be rate-limited or changed, and is not guaranteed to be unlimited. If online playback fails, the app tries the browser's built-in speech synthesis; Bengali voice availability depends on the device and browser.\n\n## Privacy\nText is sent to the online TTS provider only after **Play** is pressed. The app does not save the pasted text or audio. Do not use the online voice for sensitive text.\n`,
+  },
+  {
     id: 'zipprocessor',
     title: 'ZIP Processor',
     path: 'apps/zipProcessor/ZIP-PROCESSOR.md',
