@@ -4,12 +4,15 @@
 1. Paste or type Bengali, English, or mixed text.
 2. Choose **Auto detect**, **Bengali**, or **English**.
 3. Press **Done · Open player**.
-4. Press **Play**. Use the player to pause, resume, replay, stop, or return and edit the text.
+4. Press **Play**. The app starts with the browser/device speech voice. Use the player to pause, resume, replay, stop, or return and edit the text.
+5. If the device voice does not work or does not pronounce Bengali well, choose **Try online voice instead**.
 
-Auto detect recognizes Bengali-script and Latin-script runs. Long text is split into short audio parts for playback.
+Auto detect recognizes Bengali-script and Latin-script runs. Long text is split into short parts.
 
 ## Voice and availability
-The online voice uses Google Translate's public, unofficial listen endpoint without an API key. It is free to try, but the endpoint may be rate-limited, blocked, or changed. Therefore, truly unlimited availability cannot be promised. If online audio fails, the app tries the browser's built-in speech synthesis; available languages and voice quality depend on the device and browser. An internet connection is needed for the online voice.
+Browser/device speech is the default and does not depend on the online audio endpoint. Available languages and quality depend on installed voices; Bengali availability varies by device. You may need to enable or install a Bengali speech voice in your device settings.
+
+The optional online voice uses Google Translate's public, unofficial listen endpoint without an API key. It is free to try, but may be rate-limited, blocked, or changed. Truly unlimited availability cannot be promised. An internet connection is required for this option.
 
 ## Privacy
-The pasted text is sent in short chunks to the online voice provider only when you press **Play**. This app does not save your text or generated audio. Avoid sending sensitive text to an external service.
+This app does not save pasted text or generated audio. The online option sends text chunks to its provider when selected. Browser/device speech may be processed according to the speech provider configured on that device. Avoid sending sensitive text unless you trust the relevant provider.
