@@ -15,6 +15,7 @@ import { useDebouncedCallback } from './useDebounce';
 export function useSettings<T extends object>(key: string, fallback: T) {
   const [settings, setSettings] = useState<T>(fallback);
   const [loaded, setLoaded] = useState(false);
+  const loadedRef = useRef(false);
   const skipWrite = useRef(true);
   /** Latest value, so a pending debounce can still be flushed on unmount. */
   const latest = useRef<T>(fallback);
@@ -27,11 +28,16 @@ export function useSettings<T extends object>(key: string, fallback: T) {
       .then((value) => {
         if (!active) return;
         skipWrite.current = true;
+        loadedRef.current = true;
+        latest.current = value;
         setSettings(value);
         setLoaded(true);
       })
       .catch(() => {
-        if (active) setLoaded(true);
+        if (active) {
+          loadedRef.current = true;
+          setLoaded(true);
+        }
       });
     return () => {
       active = false;
@@ -61,7 +67,9 @@ export function useSettings<T extends object>(key: string, fallback: T) {
   useEffect(() => {
     return () => {
       persist.cancel();
-      void settingsService.set(keyRef.current, latest.current);
+      // Never persist the fallback over real saved settings if this screen
+      // unmounts before its initial IndexedDB read has finished.
+      if (loadedRef.current) void settingsService.set(keyRef.current, latest.current);
     };
   }, [persist]);
 

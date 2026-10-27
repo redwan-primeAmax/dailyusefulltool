@@ -22,36 +22,47 @@ let dbPromise: Promise<IDBPDatabase | null> | null = null;
 export function getDB(): Promise<IDBPDatabase | null> {
   if (dbPromise) return dbPromise;
 
-  dbPromise = openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_KV)) db.createObjectStore(STORE_KV);
-      if (!db.objectStoreNames.contains(STORE_INSTALLED)) {
-        db.createObjectStore(STORE_INSTALLED, { keyPath: 'appId' });
-      }
-      LOG_STORES.forEach((name) => {
-        if (db.objectStoreNames.contains(name)) return;
-        const store = db.createObjectStore(name, { keyPath: 'id' });
-        store.createIndex('by-date', 'dateKey');
-        store.createIndex('by-ts', 'ts');
-      });
+  if (typeof indexedDB === 'undefined') {
+    console.warn('[indexedDB] unavailable — using volatile memory store');
+    dbPromise = Promise.resolve(null);
+    return dbPromise;
+  }
 
-      // v8 retires Study Tracker data. Earlier migrations also removed Notes,
-      // Flashcards, and the old recovery check-ins; never recreate these stores.
-      for (const retired of ['notes', 'flashcards', 'addictionCheckIns', 'studySessions']) {
-        if (db.objectStoreNames.contains(retired)) db.deleteObjectStore(retired);
-      }
-
-      // Active app-specific stores (keyed by id, no strict schema).
-      for (const extra of ['habits', 'todos', 'readings', 'breatheSessions']) {
-        if (!db.objectStoreNames.contains(extra)) {
-          db.createObjectStore(extra, { keyPath: 'id' });
+  try {
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_KV)) db.createObjectStore(STORE_KV);
+        if (!db.objectStoreNames.contains(STORE_INSTALLED)) {
+          db.createObjectStore(STORE_INSTALLED, { keyPath: 'appId' });
         }
-      }
-    },
-  }).catch((error: unknown) => {
+        LOG_STORES.forEach((name) => {
+          if (db.objectStoreNames.contains(name)) return;
+          const store = db.createObjectStore(name, { keyPath: 'id' });
+          store.createIndex('by-date', 'dateKey');
+          store.createIndex('by-ts', 'ts');
+        });
+
+        // v8 retires Study Tracker data. Earlier migrations also removed Notes,
+        // Flashcards, and the old recovery check-ins; never recreate these stores.
+        for (const retired of ['notes', 'flashcards', 'addictionCheckIns', 'studySessions']) {
+          if (db.objectStoreNames.contains(retired)) db.deleteObjectStore(retired);
+        }
+
+        // Active app-specific stores (keyed by id, no strict schema).
+        for (const extra of ['habits', 'todos', 'readings', 'breatheSessions']) {
+          if (!db.objectStoreNames.contains(extra)) {
+            db.createObjectStore(extra, { keyPath: 'id' });
+          }
+        }
+      },
+    }).catch((error: unknown) => {
+      console.warn('[indexedDB] unavailable — using volatile memory store', error);
+      return null;
+    });
+  } catch (error) {
     console.warn('[indexedDB] unavailable — using volatile memory store', error);
-    return null;
-  });
+    dbPromise = Promise.resolve(null);
+  }
 
   return dbPromise;
 }

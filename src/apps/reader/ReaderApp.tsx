@@ -23,7 +23,7 @@ const SAMPLE = [
 export function ReaderApp() {
   const { openScreen, notify } = useOS();
   const session = useReaderSession();
-  const { settings: readerSettings } = useSettings<ReaderSettingsDoc>(SETTINGS_KEYS.reader, DEFAULT_READER);
+  const { settings: readerSettings, loaded: readerSettingsLoaded } = useSettings<ReaderSettingsDoc>(SETTINGS_KEYS.reader, DEFAULT_READER);
   const readingMode = readerSettings.readingMode === 'lines' ? 'lines' : 'words';
   const chunkSize = Number.isFinite(readerSettings.chunkSize)
     ? Math.max(1, Math.min(10, Math.floor(readerSettings.chunkSize)))
@@ -55,10 +55,19 @@ export function ReaderApp() {
 
   const wordCount = useMemo(() => toWords(text).length, [text]);
   const lineCount = useMemo(() => buildLineChunks(text).length, [text]);
+  const canStart = wordCount > 0 && (readingMode !== 'lines' || lineCount > 0);
 
   const start = () => {
-    if (wordCount === 0) {
-      notify({ title: 'Paste some text first', tone: 'warning' });
+    if (!readerSettingsLoaded) {
+      notify({ title: 'Loading saved Reader settings…', tone: 'warning' });
+      return;
+    }
+    if (!canStart) {
+      notify({
+        title: wordCount === 0 ? 'Paste some text first' : 'No readable sentences found',
+        description: readingMode === 'lines' ? 'Add text containing words or numbers.' : undefined,
+        tone: 'warning',
+      });
       return;
     }
     session.startSession(text, usePomodoro ? 'pomodoro' : 'plain', { focusMin, breakMin, chunkSize, readingMode });
@@ -239,16 +248,18 @@ export function ReaderApp() {
         fullWidth
         size="lg"
         onClick={start}
-        disabled={wordCount === 0}
+        disabled={!readerSettingsLoaded || !canStart}
         leadingIcon={<Play className="size-[18px]" />}
       >
-        Start reading
+        {readerSettingsLoaded ? 'Start reading' : 'Loading settings…'}
       </CustomButton>
 
       <p className="text-center text-[11px] leading-relaxed text-ink3">
-        {readingMode === 'lines'
-          ? 'Shows one full-stop-delimited line at a time (. / ।). Any trailing text appears as the final line.'
-          : `Reads ${chunkSize} word${chunkSize === 1 ? '' : 's'} at a time.`}{' '}
+        {!readerSettingsLoaded
+          ? 'Loading your saved Reader settings…'
+          : readingMode === 'lines'
+            ? 'Shows one full-stop-delimited line at a time (. / ।). Any trailing text appears as the final line.'
+            : `Reads ${chunkSize} word${chunkSize === 1 ? '' : 's'} at a time.`}{' '}
         Enable voice navigation during the session to say “Next” hands-free.
       </p>
     </ScreenShell>
