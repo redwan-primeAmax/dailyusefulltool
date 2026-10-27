@@ -26,12 +26,44 @@ export function buildChunks(text: string, size = DEFAULT_CHUNK_SIZE): string[][]
   return chunkWords(toWords(text), size);
 }
 
-/** One non-empty, newline-delimited source line per step, preserving word counts. */
+const SENTENCE_CLOSERS = new Set(['"', "'", '”', '’', ')', ']', '}', '»', '›']);
+
+/** One full-stop-delimited text line per step; a final unfinished line is kept. */
 export function buildLineChunks(text: string): string[][] {
-  return text
-    .split(/\r\n|\n|\r/u)
-    .map((line) => toWords(line))
-    .filter((words) => words.length > 0);
+  const lines: string[][] = [];
+  let buffer = '';
+
+  const pushLine = () => {
+    const words = toWords(buffer);
+    if (words.some((word) => /[\p{L}\p{N}]/u.test(word))) lines.push(words);
+    buffer = '';
+  };
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === undefined) continue;
+    buffer += character;
+
+    if (character !== '.' && character !== '।') continue;
+    const isDecimalPoint = character === '.'
+      && /[\p{N}]/u.test(text[index - 1] ?? '')
+      && /[\p{N}]/u.test(text[index + 1] ?? '');
+    if (isDecimalPoint) continue;
+
+    // Keep ellipses and closing quotes/brackets attached to the same sentence.
+    while (character === '.' && text[index + 1] === '.') {
+      index += 1;
+      buffer += '.';
+    }
+    while (SENTENCE_CLOSERS.has(text[index + 1] ?? '')) {
+      index += 1;
+      buffer += text[index];
+    }
+    pushLine();
+  }
+
+  pushLine();
+  return lines;
 }
 
 export interface ReaderProgress {
