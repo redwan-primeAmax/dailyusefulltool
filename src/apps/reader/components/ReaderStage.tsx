@@ -2,9 +2,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Mic, MicOff, RotateCcw } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import type { MicStatus } from '../useVoiceCommands';
+import type { ReaderReadingMode } from '../chunking';
 
 export interface ReaderStageProps {
   chunk: string[];
+  readingMode: ReaderReadingMode;
   index: number;
   total: number;
   percent: number;
@@ -22,9 +24,9 @@ export interface ReaderStageProps {
   accent?: string;
 }
 
-/** The 3-word stage plus navigation — shared by plain and Pomodoro modes. */
+/** The selected word-group or line stage plus navigation for both reader modes. */
 export function ReaderStage({
-  chunk, index, total, percent, wordsRead, totalWords, finished,
+  chunk, readingMode, index, total, percent, wordsRead, totalWords, finished,
   onNext, onPrevious, onRestart,
   voiceEnabled, micStatus, lastHeard, onToggleVoice,
   accent = '#0ea5e9',
@@ -36,7 +38,7 @@ export function ReaderStage({
       {/* Progress */}
       <div className="w-full">
         <div className="mb-1.5 flex items-center justify-between text-[10.5px] font-bold uppercase tracking-wider text-ink3">
-          <span>{index + 1} / {total || 1}</span>
+          <span>{readingMode === 'lines' ? 'Line' : 'Step'} {index + 1} / {total || 1}</span>
           <span>{wordsRead} / {totalWords} words</span>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface3">
@@ -49,7 +51,7 @@ export function ReaderStage({
         </div>
       </div>
 
-      {/* Word stage */}
+      {/* Reading stage */}
       <div className="relative flex min-h-[190px] w-full items-center justify-center overflow-hidden rounded-[28px] border border-hairline bg-surface2/60 px-6">
         <motion.div
           className="pointer-events-none absolute inset-0 opacity-40"
@@ -64,7 +66,10 @@ export function ReaderStage({
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -14, filter: 'blur(6px)' }}
             transition={{ duration: 0.22 }}
-            className="relative z-10 text-center text-[30px] font-bold leading-snug tracking-tight text-ink"
+            className={cn(
+              'relative z-10 break-words text-center font-bold tracking-tight text-ink',
+              readingMode === 'lines' ? 'text-[21px] leading-relaxed sm:text-[25px]' : 'text-[30px] leading-snug',
+            )}
           >
             {chunk.length > 0 ? chunk.join(' ') : '—'}
           </motion.p>

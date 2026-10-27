@@ -6,17 +6,28 @@ import { CustomButton } from '../../components/CustomButton';
 import { Toggle, Stepper } from '../../components/ui/controls';
 import { useOS } from '../../context/OSContext';
 import { useReaderSession } from '../../context/ReaderSessionContext';
+import { DEFAULT_READER, SETTINGS_KEYS, type ReaderSettingsDoc } from '../../db/trackerService';
+import { useSettings } from '../../hooks/useTracker';
 import { useVoiceCommands } from './useVoiceCommands';
 import { ReaderStage } from './components/ReaderStage';
-import { estimateMinutes, toWords } from './chunking';
+import { DEFAULT_CHUNK_SIZE, buildLineChunks, estimateMinutes, toWords } from './chunking';
 import { formatDuration } from '../../utils/format';
 import { cn } from '../../utils/cn';
 
-const SAMPLE = `Reading in small chunks trains your eyes to move in deliberate jumps instead of drifting across the line. Paste any passage here, choose your mode, and move forward three words at a time.`;
+const SAMPLE = [
+  'Reading in small chunks trains your eyes to move in deliberate jumps instead of drifting across the line.',
+  'Paste any passage here and choose your preferred reading mode.',
+  'Move forward by a chosen group of words or one complete line at a time.',
+].join('\n');
 
 export function ReaderApp() {
   const { openScreen, notify } = useOS();
   const session = useReaderSession();
+  const { settings: readerSettings } = useSettings<ReaderSettingsDoc>(SETTINGS_KEYS.reader, DEFAULT_READER);
+  const readingMode = readerSettings.readingMode === 'lines' ? 'lines' : 'words';
+  const chunkSize = Number.isFinite(readerSettings.chunkSize)
+    ? Math.max(1, Math.min(10, Math.floor(readerSettings.chunkSize)))
+    : DEFAULT_CHUNK_SIZE;
   const [text, setText] = useState('');
   const [usePomodoro, setUsePomodoro] = useState(false);
   const [focusMin, setFocusMin] = useState(25);
@@ -43,16 +54,18 @@ export function ReaderApp() {
   }, [voiceEnabled, voice]);
 
   const wordCount = useMemo(() => toWords(text).length, [text]);
+  const lineCount = useMemo(() => buildLineChunks(text).length, [text]);
 
   const start = () => {
     if (wordCount === 0) {
       notify({ title: 'Paste some text first', tone: 'warning' });
       return;
     }
-    session.startSession(text, usePomodoro ? 'pomodoro' : 'plain', { focusMin, breakMin });
+    session.startSession(text, usePomodoro ? 'pomodoro' : 'plain', { focusMin, breakMin, chunkSize, readingMode });
+    const stepCount = readingMode === 'lines' ? lineCount : Math.ceil(wordCount / chunkSize);
     notify({
       title: usePomodoro ? 'Focus session started' : 'Reader started',
-      description: `${wordCount} words · ${Math.ceil(wordCount / 3)} steps`,
+      description: `${wordCount} words · ${stepCount} ${readingMode === 'lines' ? 'lines' : 'steps'}`,
       tone: 'success',
     });
   };
@@ -69,7 +82,7 @@ export function ReaderApp() {
         title={isPomo ? 'Reader · Pomodoro' : 'Reader'}
         subtitle={isPomo
           ? `${session.pomoPhase === 'focus' ? 'Focus' : 'Break'} · ${session.cyclesDone} cycle${session.cyclesDone === 1 ? '' : 's'}`
-          : `${session.progress.percent}% complete`}
+          : `${session.progress.percent}% complete · ${session.readingMode === 'lines' ? `${session.progress.total} lines` : `${session.progress.total} steps`}`}
         icon={<BookOpenCheck className="size-[19px]" />}
         onOpenSettings={() => openScreen('reader', 'settings')}
         contentClassName="!space-y-5"
@@ -122,6 +135,7 @@ export function ReaderApp() {
 
         <ReaderStage
           chunk={session.currentChunk}
+          readingMode={session.readingMode}
           index={session.index}
           total={session.progress.total}
           percent={session.progress.percent}
@@ -149,7 +163,7 @@ export function ReaderApp() {
   return (
     <ScreenShell
       title="Reader"
-      subtitle="Chunked reading with optional Pomodoro"
+      subtitle="Word groups or line-by-line reading"
       icon={<BookOpenCheck className="size-[19px]" />}
       onOpenSettings={() => openScreen('reader', 'settings')}
       contentClassName="!space-y-4"
@@ -157,8 +171,8 @@ export function ReaderApp() {
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
           <p className="text-[13px] font-bold text-ink">Your text</p>
-          <span className="text-[11px] font-semibold text-ink3">
-            {wordCount} words · ~{estimateMinutes(wordCount)} min
+          <span className="text-right text-[11px] font-semibold text-ink3">
+            {wordCount} words · {readingMode === 'lines' ? `${lineCount} lines` : `${Math.ceil(wordCount / chunkSize)} steps`} · ~{estimateMinutes(wordCount)} min
           </span>
         </div>
         <textarea
@@ -232,7 +246,10 @@ export function ReaderApp() {
       </CustomButton>
 
       <p className="text-center text-[11px] leading-relaxed text-ink3">
-        Reads 3 words at a time. Enable voice navigation during the session to say “Next” hands-free.
+        {readingMode === 'lines'
+          ? 'Shows one non-empty, newline-separated line at a time.'
+          : `Reads ${chunkSize} word${chunkSize === 1 ? '' : 's'} at a time.`}{' '}
+        Enable voice navigation during the session to say “Next” hands-free.
       </p>
     </ScreenShell>
   );

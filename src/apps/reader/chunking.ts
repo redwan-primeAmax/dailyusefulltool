@@ -4,6 +4,7 @@
  */
 
 export const DEFAULT_CHUNK_SIZE = 3;
+export type ReaderReadingMode = 'words' | 'lines';
 
 /** Splits raw text into whitespace-delimited words, preserving punctuation. */
 export function toWords(text: string): string[] {
@@ -20,9 +21,17 @@ export function chunkWords(words: string[], size = DEFAULT_CHUNK_SIZE): string[]
   return chunks;
 }
 
-/** Builds chunks straight from raw text. */
+/** Builds word-count chunks straight from raw text. */
 export function buildChunks(text: string, size = DEFAULT_CHUNK_SIZE): string[][] {
   return chunkWords(toWords(text), size);
+}
+
+/** One non-empty, newline-delimited source line per step, preserving word counts. */
+export function buildLineChunks(text: string): string[][] {
+  return text
+    .split(/\r\n|\n|\r/u)
+    .map((line) => toWords(line))
+    .filter((words) => words.length > 0);
 }
 
 export interface ReaderProgress {

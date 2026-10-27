@@ -19,9 +19,9 @@ const LANGUAGE_CHOICES: { id: SpeechLanguageMode; label: string }[] = [
   { id: 'en', label: 'English' },
 ];
 
-function getStatusLabel(status: PlaybackStatus, current: number, total: number, browserFallback: boolean): string {
-  if (status === 'loading') return 'Connecting to the online voice…';
-  if (status === 'playing') return `${browserFallback ? 'Browser voice' : 'Online voice'} · Part ${current} of ${total}`;
+function getStatusLabel(status: PlaybackStatus, current: number, total: number, browserVoice: boolean, onlineVoice: boolean): string {
+  if (status === 'loading') return browserVoice ? 'Starting browser voice…' : 'Connecting to the online voice…';
+  if (status === 'playing') return `${browserVoice ? 'Browser voice' : onlineVoice ? 'Online voice' : 'Voice'} · Part ${current} of ${total}`;
   if (status === 'paused') return 'Paused';
   if (status === 'completed') return 'Finished reading';
   if (status === 'error') return 'Playback could not start';
@@ -38,11 +38,13 @@ export function TextToSpeechApp() {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [status, setStatus] = useState<PlaybackStatus>('idle');
   const [usingBrowserVoice, setUsingBrowserVoice] = useState(false);
+  const [usingOnlineVoice, setUsingOnlineVoice] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const audioRef = useRef<HTMLAudioElement>(null);
   const segmentsRef = useRef<SpeechChunk[]>([]);
   const currentSegmentRef = useRef(0);
   const browserFallbackRef = useRef(false);
+  const playbackSessionRef = useRef(0);
 
   const characterCount = Array.from(text).length;
   const preview = useMemo(() => playerText.replace(/\s+/gu, ' ').trim(), [playerText]);
@@ -54,25 +56,33 @@ export function TextToSpeechApp() {
     segmentsRef.current = segments;
   }, [segments]);
 
-  const startBrowserFallback = useCallback((fromSegment: number) => {
+  const startBrowserPlayback = useCallback((fromSegment: number, onlineFailed = false) => {
     if (browserFallbackRef.current) return;
     const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
     if (!synthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      setUsingBrowserVoice(false);
+      setUsingOnlineVoice(false);
       setStatus('error');
-      setErrorMessage('The free online voice is unavailable, and this browser has no built-in speech voice. Check your connection and try again.');
+      setErrorMessage('Browser speech is not available here. Try the online voice, or use a browser/device with speech enabled.');
       return;
     }
 
+    const session = ++playbackSessionRef.current;
     browserFallbackRef.current = true;
     setUsingBrowserVoice(true);
+    setUsingOnlineVoice(false);
     synthesis.cancel();
     if (audioRef.current) audioRef.current.pause();
-    setErrorMessage('The online voice could not be reached. Trying a voice installed in this browser; Bengali voice availability varies by device.');
-    notify({
-      title: 'Switching to a browser voice',
-      description: 'The free online voice did not respond. Your browser may use a voice installed on this device.',
-      tone: 'warning',
-    });
+    setErrorMessage(onlineFailed
+      ? 'The online voice did not respond. Trying a voice installed in this browser; Bengali voice availability varies by device.'
+      : 'Using a voice supplied by your browser/device. Bengali voice availability varies by device.');
+    if (onlineFailed) {
+      notify({
+        title: 'Online voice unavailable',
+        description: 'Trying the browser/device voice instead.',
+        tone: 'warning',
+      });
+    }
 
     const remaining = segmentsRef.current.slice(fromSegment);
     if (remaining.length === 0) {
@@ -87,17 +97,23 @@ export function TextToSpeechApp() {
       const matchingVoice = synthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith(languagePrefix));
       if (matchingVoice) utterance.voice = matchingVoice;
       utterance.onstart = () => {
+        if (session !== playbackSessionRef.current || !browserFallbackRef.current) return;
         currentSegmentRef.current = fromSegment + offset;
         setCurrentSegment(fromSegment + offset);
         setStatus('playing');
       };
       utterance.onend = () => {
+        if (session !== playbackSessionRef.current || !browserFallbackRef.current) return;
+        const nextSegment = fromSegment + offset + 1;
+        currentSegmentRef.current = nextSegment;
         if (offset === remaining.length - 1) setStatus('completed');
-        else setCurrentSegment(fromSegment + offset + 1);
+        else setCurrentSegment(nextSegment);
       };
       utterance.onerror = () => {
+        if (session !== playbackSessionRef.current || !browserFallbackRef.current) return;
         setStatus('error');
-        setErrorMessage('The browser voice stopped unexpectedly. Try Play again or check the device speech settings.');
+        setErrorMessage('The browser/device voice stopped. Try the online voice or check the speech settings on this device.');
+        synthesis.cancel();
       };
       synthesis.speak(utterance);
     });
@@ -109,18 +125,22 @@ export function TextToSpeechApp() {
     const audio = audioRef.current;
     if (!segment || !audio) return;
 
+    const session = ++playbackSessionRef.current;
     browserFallbackRef.current = false;
     setUsingBrowserVoice(false);
+    setUsingOnlineVoice(true);
+    window.speechSynthesis?.cancel();
     currentSegmentRef.current = index;
     setCurrentSegment(index);
     setStatus('loading');
     setErrorMessage('');
+    audio.pause();
     audio.src = createOnlineSpeechUrl(segment);
     audio.load();
     void audio.play().then(() => {
-      if (!browserFallbackRef.current) setStatus('playing');
-    }).catch(() => startBrowserFallback(index));
-  }, [startBrowserFallback]);
+      if (session === playbackSessionRef.current && !browserFallbackRef.current) setStatus('playing');
+    }).catch(() => startBrowserPlayback(index, true));
+  }, [startBrowserPlayback]);
 
   const handleAudioEnded = () => {
     if (browserFallbackRef.current) return;
@@ -135,17 +155,29 @@ export function TextToSpeechApp() {
 
   const handleAudioError = () => {
     if (!browserFallbackRef.current && status !== 'idle' && status !== 'paused') {
-      startBrowserFallback(currentSegmentRef.current);
+      startBrowserPlayback(currentSegmentRef.current, true);
     }
   };
 
   const startPlayback = () => {
     if (segmentsRef.current.length === 0) return;
     browserFallbackRef.current = false;
+    setUsingOnlineVoice(false);
     window.speechSynthesis?.cancel();
     currentSegmentRef.current = 0;
     setCurrentSegment(0);
-    playOnlineSegment(0);
+    if (window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') startBrowserPlayback(0);
+    else playOnlineSegment(0);
+  };
+
+  const switchToOnlineVoice = () => {
+    const fromSegment = status === 'playing' || status === 'paused' ? currentSegmentRef.current : 0;
+    playOnlineSegment(fromSegment);
+  };
+
+  const switchToBrowserVoice = () => {
+    const fromSegment = status === 'playing' || status === 'paused' ? currentSegmentRef.current : 0;
+    startBrowserPlayback(fromSegment);
   };
 
   const pausePlayback = () => {
@@ -162,10 +194,11 @@ export function TextToSpeechApp() {
     }
     const audio = audioRef.current;
     if (!audio) return;
-    void audio.play().then(() => setStatus('playing')).catch(() => startBrowserFallback(currentSegmentRef.current));
+    void audio.play().then(() => setStatus('playing')).catch(() => startBrowserPlayback(currentSegmentRef.current, true));
   };
 
   const stopPlayback = () => {
+    playbackSessionRef.current += 1;
     audioRef.current?.pause();
     if (audioRef.current) audioRef.current.currentTime = 0;
     window.speechSynthesis?.cancel();
@@ -173,11 +206,13 @@ export function TextToSpeechApp() {
     currentSegmentRef.current = 0;
     setCurrentSegment(0);
     setUsingBrowserVoice(false);
+    setUsingOnlineVoice(false);
     setStatus('idle');
     setErrorMessage('');
   };
 
   useEffect(() => () => {
+    playbackSessionRef.current += 1;
     audioRef.current?.pause();
     window.speechSynthesis?.cancel();
   }, []);
@@ -196,6 +231,7 @@ export function TextToSpeechApp() {
     currentSegmentRef.current = 0;
     setStatus('idle');
     setUsingBrowserVoice(false);
+    setUsingOnlineVoice(false);
     setErrorMessage('');
     setScreen('player');
   };
@@ -295,7 +331,7 @@ export function TextToSpeechApp() {
 
             <section className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.05] p-3.5" aria-label="Online speech privacy note">
               <p className="text-[11px] leading-5 text-slate-400">
-                The free online voice sends text chunks to Google Translate when you press Play. It uses a public, unofficial endpoint that may be limited or change. If it is unavailable, the app tries a voice installed in your browser.
+                Play starts with your browser/device voice. If that voice cannot read the text, choose <strong className="font-bold text-slate-300">Try online voice</strong>; that sends text chunks to Google Translate's public, unofficial service, which may be limited or change. Voice and language support vary by device.
               </p>
             </section>
           </>
@@ -319,7 +355,7 @@ export function TextToSpeechApp() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold text-slate-200" aria-live="polite">
-                    {getStatusLabel(status, Math.min(currentSegment + 1, segments.length), segments.length, usingBrowserVoice)}
+                    {getStatusLabel(status, Math.min(currentSegment + 1, segments.length), segments.length, usingBrowserVoice, usingOnlineVoice)}
                   </p>
                   <p className="mt-1 text-[10px] text-slate-500">
                     {segments.length.toLocaleString('en-US')} short audio parts · {characterCount.toLocaleString('en-US')} characters
@@ -367,9 +403,16 @@ export function TextToSpeechApp() {
                   <ArrowLeft size={17} />
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={usingOnlineVoice ? switchToBrowserVoice : switchToOnlineVoice}
+                className="mt-3 min-h-10 w-full rounded-xl border border-white/[0.08] bg-slate-950/30 px-3 text-[11px] font-bold text-slate-300 transition hover:border-violet-300/25 hover:bg-violet-400/[0.06] hover:text-violet-100"
+              >
+                {usingOnlineVoice ? 'Switch to browser voice' : 'Try online voice instead'}
+              </button>
             </section>
 
-            <p className="text-center text-[10px] leading-5 text-slate-500">Free online audio requires an internet connection. If the online voice is unavailable, the browser voice is used when supported.</p>
+            <p className="text-center text-[10px] leading-5 text-slate-500">Browser voice availability depends on your device. Online voice requires internet access and may be unavailable or rate-limited.</p>
             <audio ref={audioRef} preload="none" onEnded={handleAudioEnded} onError={handleAudioError} className="hidden" aria-hidden="true" />
           </>
         )}

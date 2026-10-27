@@ -2,7 +2,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from 'react';
-import { buildChunks, computeProgress, toWords, DEFAULT_CHUNK_SIZE } from '../apps/reader/chunking';
+import { buildChunks, buildLineChunks, computeProgress, toWords, DEFAULT_CHUNK_SIZE, type ReaderReadingMode } from '../apps/reader/chunking';
 
 export type ReaderMode = 'plain' | 'pomodoro';
 export type PomoPhase = 'focus' | 'break';
@@ -11,6 +11,7 @@ interface ReaderSessionValue {
   /** True once a session has been started (survives navigation). */
   active: boolean;
   mode: ReaderMode;
+  readingMode: ReaderReadingMode;
   chunks: string[][];
   index: number;
   totalWords: number;
@@ -24,7 +25,7 @@ interface ReaderSessionValue {
   pomoRunning: boolean;
   cyclesDone: number;
 
-  startSession: (text: string, mode: ReaderMode, opts?: { focusMin?: number; breakMin?: number; chunkSize?: number }) => void;
+  startSession: (text: string, mode: ReaderMode, opts?: { focusMin?: number; breakMin?: number; chunkSize?: number; readingMode?: ReaderReadingMode }) => void;
   endSession: () => void;
   next: () => void;
   previous: () => void;
@@ -37,6 +38,7 @@ const ReaderSessionContext = createContext<ReaderSessionValue | null>(null);
 export function ReaderSessionProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(false);
   const [mode, setMode] = useState<ReaderMode>('plain');
+  const [readingMode, setReadingMode] = useState<ReaderReadingMode>('words');
   const [chunks, setChunks] = useState<string[][]>([]);
   const [index, setIndex] = useState(0);
   const [totalWords, setTotalWords] = useState(0);
@@ -51,9 +53,15 @@ export function ReaderSessionProvider({ children }: { children: ReactNode }) {
   const deadline = useRef<number>(0);
 
   const startSession: ReaderSessionValue['startSession'] = useCallback((text, nextMode, opts) => {
-    const size = opts?.chunkSize ?? DEFAULT_CHUNK_SIZE;
+    const requestedSize = opts?.chunkSize ?? DEFAULT_CHUNK_SIZE;
+    const size = Number.isFinite(requestedSize)
+      ? Math.max(1, Math.min(10, Math.floor(requestedSize)))
+      : DEFAULT_CHUNK_SIZE;
+    const nextReadingMode: ReaderReadingMode = opts?.readingMode === 'lines' ? 'lines' : 'words';
     const words = toWords(text);
-    setChunks(buildChunks(text, size));
+    const nextChunks = nextReadingMode === 'lines' ? buildLineChunks(text) : buildChunks(text, size);
+    setChunks(nextChunks);
+    setReadingMode(nextReadingMode);
     setTotalWords(words.length);
     setIndex(0);
     setMode(nextMode);
@@ -133,6 +141,7 @@ export function ReaderSessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ReaderSessionValue>(() => ({
     active,
     mode,
+    readingMode,
     chunks,
     index,
     totalWords,
@@ -150,7 +159,7 @@ export function ReaderSessionProvider({ children }: { children: ReactNode }) {
     restart,
     togglePomo,
   }), [
-    active, mode, chunks, index, totalWords, progress,
+    active, mode, readingMode, chunks, index, totalWords, progress,
     pomoPhase, pomoRemaining, pomoRunning, cyclesDone,
     startSession, endSession, next, previous, restart, togglePomo,
   ]);

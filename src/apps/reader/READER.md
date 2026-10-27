@@ -1,13 +1,12 @@
 # Reader
 
 ## Overview
-Chunked reading trainer that streams text three words at a time, with optional
-Pomodoro integration and hands-free voice navigation.
+Reading trainer with a configurable word-group mode (1–10 words per step) and a line mode (one non-empty newline-delimited input line per step), plus optional Pomodoro integration and hands-free voice navigation.
 
 ## Architecture
 | File | Responsibility |
 | --- | --- |
-| `chunking.ts` | Word splitting, chunk grouping, progress + time estimates |
+| `chunking.ts` | Word grouping, newline-delimited line grouping, progress + time estimates |
 | `speech.ts` | Fuzzy command matching, Levenshtein scoring, Web Speech typings |
 | `useVoiceCommands.ts` | Mic permission, continuous recognition, auto-restart |
 | `components/ReaderStage.tsx` | Word stage, progress bar, nav + voice panel |
@@ -15,8 +14,8 @@ Pomodoro integration and hands-free voice navigation.
 | `../../context/ReaderSessionContext.tsx` | Global session so it survives navigation |
 
 ## Pages
-1. **Setup** — textarea, word/`~min` counter, sample loader, Pomodoro toggle with focus/break steppers, Start button.
-2. **Session (plain)** — progress bar, 3-word stage, Prev/Restart/Next, voice panel.
+1. **Setup** — textarea, word/line/`~min` counts, sample loader, Pomodoro toggle with focus/break steppers, Start button.
+2. **Session (plain)** — progress bar, selected word-group or line stage, Prev/Restart/Next, voice panel.
 3. **Session (Pomodoro)** — countdown card pinned above the stage; everything else identical.
 
 ## Buttons
@@ -24,7 +23,7 @@ Pomodoro integration and hands-free voice navigation.
 | --- | --- |
 | Use sample | Loads demo copy into the textarea |
 | Start reading | Builds chunks and activates the global session |
-| Prev / Next | Move one chunk (3 words) backwards/forwards |
+| Prev / Next | Move one configured word group or one input line backwards/forwards |
 | Restart | Jumps back to chunk 0 |
 | Mic | Requests permission and toggles continuous recognition |
 | Pause/Play | Pauses the Pomodoro countdown |

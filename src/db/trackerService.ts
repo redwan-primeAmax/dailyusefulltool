@@ -75,6 +75,7 @@ export const STORE_BREATHE_SESSIONS = 'breatheSessions';
 
 export interface ReaderSettingsDoc {
   chunkSize: number;
+  readingMode: 'words' | 'lines';
   autoVoice: boolean;
   voiceThreshold: number;
   focusMin: number;
@@ -83,6 +84,7 @@ export interface ReaderSettingsDoc {
 
 export const DEFAULT_READER: ReaderSettingsDoc = {
   chunkSize: 3,
+  readingMode: 'words',
   autoVoice: false,
   voiceThreshold: 0.62,
   focusMin: 25,

@@ -1,7 +1,7 @@
 import { BookOpenCheck, Info, Mic, Timer } from 'lucide-react';
 import { ScreenShell } from '../../components/ui/ScreenShell';
 import { SettingsGroup, SettingsRow } from '../../components/ui/SettingsRow';
-import { Stepper, Toggle } from '../../components/ui/controls';
+import { Segmented, Stepper, Toggle } from '../../components/ui/controls';
 import { DangerZone } from '../../components/ui/DangerZone';
 import { useSettings } from '../../hooks/useTracker';
 import { DEFAULT_READER, SETTINGS_KEYS, type ReaderSettingsDoc } from '../../db/trackerService';
@@ -21,13 +21,30 @@ export function ReaderSettings() {
       <SettingsGroup title="Reading">
         <SettingsRow
           icon={<BookOpenCheck className="size-[17px]" />}
-          label="Words per step"
-          description="How many words appear at once"
-          control={
-            <Stepper value={settings.chunkSize} step={1} min={1} max={10}
-              onChange={(chunkSize) => update({ chunkSize })} />
-          }
+          label="Reading mode"
+          description={settings.readingMode === 'lines' ? 'Show one input line at a time' : 'Show a group of words at a time'}
+          control={(
+            <Segmented
+              className="w-[150px]"
+              size="sm"
+              ariaLabel="Reader reading mode"
+              options={[{ value: 'words', label: 'Words' }, { value: 'lines', label: 'Lines' }]}
+              value={settings.readingMode === 'lines' ? 'lines' : 'words'}
+              onChange={(readingMode) => update({ readingMode })}
+            />
+          )}
         />
+        {settings.readingMode !== 'lines' && (
+          <SettingsRow
+            icon={<BookOpenCheck className="size-[17px]" />}
+            label="Words per step"
+            description="How many words appear at once"
+            control={(
+              <Stepper value={settings.chunkSize} step={1} min={1} max={10}
+                onChange={(chunkSize) => update({ chunkSize })} />
+            )}
+          />
+        )}
       </SettingsGroup>
 
       <SettingsGroup title="Voice navigation">
@@ -82,7 +99,7 @@ export function ReaderSettings() {
         appName="Reader"
         actions={[{
           label: 'Reset reader settings',
-          description: 'Restore chunk size, voice and Pomodoro defaults',
+          description: 'Restore reading mode, word count, voice and Pomodoro defaults',
           settingsKeys: [{ key: SETTINGS_KEYS.reader, defaults: DEFAULT_READER }],
           confirmTitle: 'Reset reader settings?',
           confirmDescription: 'All reader preferences return to their factory values.',
