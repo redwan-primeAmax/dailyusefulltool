@@ -22,7 +22,7 @@ export function ReaderSettings() {
         <SettingsRow
           icon={<BookOpenCheck className="size-[17px]" />}
           label="Reading mode"
-          description={settings.readingMode === 'lines' ? 'Show one input line at a time' : 'Show a group of words at a time'}
+          description={settings.readingMode === 'lines' ? 'End each displayed line at a full stop (. / ।)' : 'Show a group of words at a time'}
           control={(
             <Segmented
               className="w-[150px]"

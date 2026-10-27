@@ -1,12 +1,12 @@
 # Reader
 
 ## Overview
-Reading trainer with a configurable word-group mode (1–10 words per step) and a line mode (one non-empty newline-delimited input line per step), plus optional Pomodoro integration and hands-free voice navigation.
+Reading trainer with a configurable word-group mode (1–10 words per step) and a line mode (one sentence through each full stop (`.` or `।`) per step). Any trailing text without a full stop becomes the final step. Also supports optional Pomodoro integration and hands-free voice navigation.
 
 ## Architecture
 | File | Responsibility |
 | --- | --- |
-| `chunking.ts` | Word grouping, newline-delimited line grouping, progress + time estimates |
+| `chunking.ts` | Word grouping, full-stop-delimited line grouping, progress + time estimates |
 | `speech.ts` | Fuzzy command matching, Levenshtein scoring, Web Speech typings |
 | `useVoiceCommands.ts` | Mic permission, continuous recognition, auto-restart |
 | `components/ReaderStage.tsx` | Word stage, progress bar, nav + voice panel |
@@ -23,7 +23,7 @@ Reading trainer with a configurable word-group mode (1–10 words per step) and 
 | --- | --- |
 | Use sample | Loads demo copy into the textarea |
 | Start reading | Builds chunks and activates the global session |
-| Prev / Next | Move one configured word group or one input line backwards/forwards |
+| Prev / Next | Move one configured word group or one full-stop-delimited line backwards/forwards |
 | Restart | Jumps back to chunk 0 |
 | Mic | Requests permission and toggles continuous recognition |
 | Pause/Play | Pauses the Pomodoro countdown |

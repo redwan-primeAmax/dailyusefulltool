@@ -247,7 +247,7 @@ export function ReaderApp() {
 
       <p className="text-center text-[11px] leading-relaxed text-ink3">
         {readingMode === 'lines'
-          ? 'Shows one non-empty, newline-separated line at a time.'
+          ? 'Shows one full-stop-delimited line at a time (. / ।). Any trailing text appears as the final line.'
           : `Reads ${chunkSize} word${chunkSize === 1 ? '' : 's'} at a time.`}{' '}
         Enable voice navigation during the session to say “Next” hands-free.
       </p>
