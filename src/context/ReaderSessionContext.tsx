@@ -2,7 +2,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from 'react';
-import { buildChunks, buildLineChunks, computeProgress, toWords, DEFAULT_CHUNK_SIZE, type ReaderReadingMode } from '../apps/reader/chunking';
+import { buildChunks, buildLineChunks, computeProgress, DEFAULT_CHUNK_SIZE, type ReaderReadingMode } from '../apps/reader/chunking';
 
 export type ReaderMode = 'plain' | 'pomodoro';
 export type PomoPhase = 'focus' | 'break';
@@ -58,14 +58,13 @@ export function ReaderSessionProvider({ children }: { children: ReactNode }) {
       ? Math.max(1, Math.min(10, Math.floor(requestedSize)))
       : DEFAULT_CHUNK_SIZE;
     const nextReadingMode: ReaderReadingMode = opts?.readingMode === 'lines' ? 'lines' : 'words';
-    const words = toWords(text);
     const nextChunks = nextReadingMode === 'lines' ? buildLineChunks(text) : buildChunks(text, size);
     setChunks(nextChunks);
     setReadingMode(nextReadingMode);
-    setTotalWords(words.length);
+    setTotalWords(nextChunks.reduce((count, chunk) => count + chunk.length, 0));
     setIndex(0);
     setMode(nextMode);
-    setActive(words.length > 0);
+    setActive(nextChunks.length > 0);
     if (nextMode === 'pomodoro') {
       const f = opts?.focusMin ?? 25;
       const b = opts?.breakMin ?? 5;
