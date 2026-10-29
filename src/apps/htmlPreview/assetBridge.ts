@@ -180,3 +180,70 @@ export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, 
     }
   })();`;
 }
+
+/**
+ * The iframe runs with an opaque sandboxed origin, so Blob URLs created by the
+ * parent page may be rejected by the browser. Keep the app document inert in a
+ * JSON data block until its file Blobs have been delivered, then mint URLs inside
+ * the iframe's own origin before parsing/executing any app code.
+ */
+export function createPreviewHydrationShell(appDocument: string, nonce: string, csp: string): string {
+  const serializedAppDocument = JSON.stringify(appDocument)
+    .replace(/</gu, '\\u003c')
+    .replace(/\u2028/gu, '\\u2028')
+    .replace(/\u2029/gu, '\\u2029');
+  const escapedCsp = csp
+    .replace(/&/gu, '&amp;')
+    .replace(/"/gu, '&quot;')
+    .replace(/</gu, '&lt;');
+  const nonceLiteral = JSON.stringify(nonce).replace(/</gu, '\\u003c');
+  const bootstrap = `(function(){
+    var nonce = ${nonceLiteral};
+    var source = document.getElementById('zip-preview-app');
+    var appDocument = JSON.parse(source.textContent || '""');
+    var waiting = true;
+
+    async function hydrate(event){
+      if (!waiting || event.source !== window.parent) return;
+      var message = event.data;
+      if (!message || message.type !== 'zip-preview-assets' || message.nonce !== nonce || !Array.isArray(message.assets)) return;
+      waiting = false;
+      window.removeEventListener('message', hydrate);
+
+      try {
+        var urls = new Map();
+        message.assets.forEach(function(entry){
+          if (!Array.isArray(entry) || typeof entry[0] !== 'string' || !entry[1] || typeof entry[1].slice !== 'function') return;
+          urls.set(entry[0], window.URL.createObjectURL(entry[1]));
+        });
+
+        // CSS and module Blobs may contain ZIP asset tokens. Replace those only
+        // after every child-origin URL exists, so the resulting content points
+        // to resources that the isolated frame itself can load.
+        for (var index = 0; index < message.assets.length; index += 1) {
+          var entry = message.assets[index];
+          if (!Array.isArray(entry) || !urls.has(entry[0]) || !entry[1] || !/^text\\/(?:css|javascript)/i.test(entry[1].type || '')) continue;
+          var sourceText = await entry[1].text();
+          urls.forEach(function(url, token){ sourceText = sourceText.split(token).join(url); });
+          var rewritten = new Blob([sourceText], { type: entry[1].type });
+          var oldUrl = urls.get(entry[0]);
+          var newUrl = window.URL.createObjectURL(rewritten);
+          window.URL.revokeObjectURL(oldUrl);
+          urls.set(entry[0], newUrl);
+        }
+
+        var appHtml = appDocument;
+        urls.forEach(function(url, token){ appHtml = appHtml.split(token).join(url); });
+        document.open();
+        document.write(appHtml);
+        document.close();
+      } catch (_error) {
+        document.body.textContent = 'The ZIP files could not be prepared for this browser preview. Try reloading the preview.';
+      }
+    }
+
+    window.addEventListener('message', hydrate);
+  })();`;
+
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escapedCsp}"><meta name="referrer" content="no-referrer"></head><body><p>Loading local ZIP files…</p><script id="zip-preview-app" type="application/json">${serializedAppDocument}</script><script>${bootstrap}</script></body></html>`;
+}
