@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type SyntheticEvent } from 'react';
 import JSZip from 'jszip';
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import { CustomButton } from '../../components/CustomButton';
 import { ScreenShell } from '../../components/ui/ScreenShell';
 import { useOS } from '../../context/OSContext';
 import { cn } from '../../utils/cn';
-import { createAssetBridgeScript } from './assetBridge';
+import { createAssetBridgeScript, createPreviewHydrationShell } from './assetBridge';
 import {
   chooseDefaultEntrypoint,
   formatPreviewSize,
@@ -42,6 +42,11 @@ interface PreviewArchive {
   entries: Map<string, ArchiveEntry>;
   htmlPaths: string[];
   totalSize: number;
+}
+
+interface PreviewAssetBundle {
+  nonce: string;
+  assets: Array<[string, Blob]>;
 }
 
 function getUncompressedSize(file: JSZip.JSZipObject): number {
@@ -130,7 +135,9 @@ function buildCsp(allowNetwork: boolean): string {
 export function HtmlPreviewApp() {
   const { notify } = useOS();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const objectUrls = useRef<Set<string>>(new Set());
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const previewBundleRef = useRef<PreviewAssetBundle | null>(null);
+  const lastSentBundleRef = useRef('');
   const mounted = useRef(true);
   const [archive, setArchive] = useState<PreviewArchive | null>(null);
   const [entryPath, setEntryPath] = useState('');
@@ -141,30 +148,35 @@ export function HtmlPreviewApp() {
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState('');
 
-  const clearObjectUrls = () => {
-    objectUrls.current.forEach((url) => URL.revokeObjectURL(url));
-    objectUrls.current.clear();
-  };
-
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      objectUrls.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrls.current.clear();
+      previewBundleRef.current = null;
     };
   }, []);
 
-  const createObjectUrl = (blob: Blob): string => {
-    const url = URL.createObjectURL(blob);
-    objectUrls.current.add(url);
-    return url;
+  const handlePreviewFrameLoad = (event?: SyntheticEvent<HTMLIFrameElement>) => {
+    const bundle = previewBundleRef.current;
+    const target = event?.currentTarget.contentWindow ?? previewFrameRef.current?.contentWindow;
+    if (!bundle || !target) return;
+
+    const deliveryKey = `${bundle.nonce}:${previewVersion}`;
+    if (lastSentBundleRef.current === deliveryKey) return;
+
+    try {
+      target.postMessage({ type: 'zip-preview-assets', nonce: bundle.nonce, assets: bundle.assets }, '*');
+      lastSentBundleRef.current = deliveryKey;
+    } catch {
+      setError('The browser could not pass the local ZIP files into the isolated preview. Reload the preview or try a smaller ZIP.');
+      notify({ title: 'Could not start preview', description: 'The browser could not pass the local ZIP files into the isolated preview.', tone: 'danger' });
+    }
   };
 
   const loadArchive = async (file: File) => {
     if (loading || building) return;
+    previewBundleRef.current = null;
     setPreviewDocument('');
-    clearObjectUrls();
     setArchive(null);
     setEntryPath('');
     setError('');
@@ -240,11 +252,19 @@ export function HtmlPreviewApp() {
   const buildPreview = async () => {
     if (!archive || !entryPath || building) return;
     const previewArchive = archive;
-    clearObjectUrls();
+    previewBundleRef.current = null;
     setError('');
     setBuilding(true);
 
     try {
+      const bundleNonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+      const assetBlobs = new Map<string, Blob>();
+      let assetIndex = 0;
+      const registerAsset = (blob: Blob): string => {
+        const token = `zipasset://preview-${bundleNonce}/asset/${String(++assetIndex).padStart(8, '0')}/`;
+        assetBlobs.set(token, blob);
+        return token;
+      };
       const rawUrls = new Map<string, string>();
       let actualSize = 0;
       for (const file of previewArchive.entries.values()) {
@@ -255,7 +275,7 @@ export function HtmlPreviewApp() {
           throw new Error(`The extracted app is larger than the ${formatPreviewSize(MAX_UNCOMPRESSED_SIZE_BYTES)} preview limit.`);
         }
         const typedContent = content.slice(0, content.size, mimeTypeForPath(file.path));
-        rawUrls.set(file.path, createObjectUrl(typedContent));
+        rawUrls.set(file.path, registerAsset(typedContent));
       }
 
       // Only retain source text for code and stylesheets. Binary assets (including
@@ -279,7 +299,7 @@ export function HtmlPreviewApp() {
         const nextAncestors = new Set(ancestors);
         nextAncestors.add(path);
         const css = rewriteCss(source, path, rawUrls, cssUrlForPath, nextAncestors);
-        const url = createObjectUrl(new Blob([css], { type: 'text/css; charset=utf-8' }));
+        const url = registerAsset(new Blob([css], { type: 'text/css; charset=utf-8' }));
         processedCssUrls.set(path, url);
         return url;
       }
@@ -317,7 +337,7 @@ export function HtmlPreviewApp() {
         const nextAncestors = new Set(ancestors);
         nextAncestors.add(path);
         const rewritten = rewriteModuleSource(source, path, nextAncestors);
-        const url = createObjectUrl(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' }));
+        const url = registerAsset(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' }));
         processedModuleUrls.set(path, url);
         return url;
       }
@@ -326,6 +346,10 @@ export function HtmlPreviewApp() {
       if (htmlSource === undefined) throw new Error('The selected HTML page could not be read.');
       const parsed = new DOMParser().parseFromString(htmlSource, 'text/html');
       parsed.querySelectorAll('base').forEach((base) => base.remove());
+      parsed.querySelectorAll('meta[http-equiv]').forEach((meta) => {
+        const policy = meta.getAttribute('http-equiv')?.trim().toLowerCase();
+        if (policy === 'content-security-policy' || policy === 'content-security-policy-report-only') meta.remove();
+      });
 
       parsed.querySelectorAll('script[type="importmap"]').forEach((script) => {
         try {
@@ -363,7 +387,7 @@ export function HtmlPreviewApp() {
         const source = script.textContent ?? '';
         if (!source.trim()) return;
         const rewritten = rewriteModuleSource(source, entryPath, new Set([entryPath]));
-        script.setAttribute('src', createObjectUrl(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' })));
+        script.setAttribute('src', registerAsset(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' })));
         script.textContent = '';
       });
 
@@ -435,22 +459,32 @@ export function HtmlPreviewApp() {
         viewport.content = 'width=device-width, initial-scale=1';
         parsed.head.append(viewport);
       }
+      // The runtime bridge must also map dynamically-created stylesheet links to
+      // the rewritten CSS Blobs, not to the unprocessed archive bytes.
+      for (const path of textSources.keys()) {
+        if (/\.css$/iu.test(path)) cssUrlForPath(path);
+      }
+      const runtimeAssetUrls = new Map(rawUrls);
+      processedCssUrls.forEach((url, path) => runtimeAssetUrls.set(path, url));
+
       const assetBridge = parsed.createElement('script');
-      assetBridge.textContent = createAssetBridgeScript(rawUrls, entryPath);
+      assetBridge.textContent = createAssetBridgeScript(runtimeAssetUrls, entryPath);
       const firstPageScript = parsed.head.querySelector('script');
       if (firstPageScript) firstPageScript.before(assetBridge);
       else parsed.head.append(assetBridge);
 
       if (!parsed.title) parsed.title = entryPath.split('/').pop() ?? previewArchive.name;
 
-      setPreviewDocument(`<!doctype html>\n${parsed.documentElement.outerHTML}`);
+      const appDocument = `<!doctype html>\n${parsed.documentElement.outerHTML}`;
+      previewBundleRef.current = { nonce: bundleNonce, assets: [...assetBlobs.entries()] };
+      setPreviewDocument(createPreviewHydrationShell(appDocument, bundleNonce, csp.content));
       notify({
-        title: 'Preview loaded',
+        title: 'Preview ready',
         description: `${entryPath} · ${allowNetwork ? 'HTTPS network enabled' : 'offline sandbox'}`,
         tone: 'success',
       });
     } catch (previewError) {
-      clearObjectUrls();
+      previewBundleRef.current = null;
       if (!mounted.current) return;
       const message = previewError instanceof Error ? previewError.message : 'The app preview could not be built.';
       setError(message);
@@ -461,7 +495,7 @@ export function HtmlPreviewApp() {
   };
 
   const resetArchive = () => {
-    clearObjectUrls();
+    previewBundleRef.current = null;
     setArchive(null);
     setEntryPath('');
     setPreviewDocument('');
@@ -471,7 +505,7 @@ export function HtmlPreviewApp() {
   };
 
   const leavePreview = () => {
-    clearObjectUrls();
+    previewBundleRef.current = null;
     setPreviewDocument('');
   };
 
@@ -528,13 +562,21 @@ export function HtmlPreviewApp() {
             </button>
           </div>
 
+          {error && (
+            <div role="alert" className="rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-[12px] leading-5 text-red-200">
+              {error}
+            </div>
+          )}
+
           <div className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-2xl shadow-black/20">
             <iframe
               key={previewVersion}
+              ref={previewFrameRef}
               title={`Preview of ${htmlEntryLabel}`}
               sandbox="allow-scripts allow-forms"
               referrerPolicy="no-referrer"
               srcDoc={previewDocument}
+              onLoad={handlePreviewFrameLoad}
               className="block h-[68vh] min-h-[420px] w-full bg-white"
             />
           </div>

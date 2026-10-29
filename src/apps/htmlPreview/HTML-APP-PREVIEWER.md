@@ -13,11 +13,11 @@ Upload a `.zip` containing a web app, choose an `.html` or `.htm` entry page, an
 Local file references are resolved relative to the selected HTML page or the stylesheet/module that uses them. ZIPs are limited to 30 MB compressed, 80 MB expanded, and 3,000 files.
 
 ## Security
-The app executes uploaded JavaScript in an iframe sandbox with scripts and forms allowed, but without same-origin access, top navigation, or popups. A Content Security Policy blocks network access unless the user opts into HTTPS access. The preview cannot access this app's storage or parent-page DOM. Only run ZIPs you trust.
+The app executes uploaded JavaScript in an iframe sandbox with scripts and forms allowed, but without same-origin access, top navigation, or popups. The HTML stays inert until the archive's Blobs are handed into that frame, where local resource URLs are created; this avoids cross-origin Blob URL failures without granting the preview access to the parent origin. A Content Security Policy blocks network access unless the user opts into HTTPS access. The preview cannot access this app's storage or parent-page DOM. Only run ZIPs you trust.
 
 Some apps that require cookies, same-origin storage, service workers, or unsupported module/package resolution may not work in this isolated client-side preview.
 
 ## State and routing
 - `main` → `HtmlPreviewApp`
-- ZIP contents and preview object URLs live only in memory and are released when the preview is closed or the app is left.
+- ZIP contents and iframe-scoped object URLs live only in memory and are released when the preview is closed or the app is left.
 - No settings screen or persistent user data is used.
