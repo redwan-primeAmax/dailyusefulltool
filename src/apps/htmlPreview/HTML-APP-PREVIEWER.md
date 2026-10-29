@@ -6,6 +6,7 @@ Upload a `.zip` containing a web app, choose an `.html` or `.htm` entry page, an
 ## Supported content
 - HTML, inline and local CSS, classic JavaScript, and JavaScript modules with relative imports where possible.
 - Local JavaScript libraries, stylesheets, images, icons, fonts, audio, and video stored inside the archive.
+- Relative asset paths created at runtime by JavaScript, including `new Audio(...)`, media/image `src` assignments, `fetch()`, and `XMLHttpRequest`.
 - Multiple HTML files, with `index.html` preferred automatically and a selector for other entry pages.
 - Optional HTTPS access for CDN scripts/styles and online APIs. This is disabled by default.
 
