@@ -3,12 +3,34 @@
  * `new Audio('./sounds/clip.mp3')`, fetch(), and XHR can resolve files from the
  * selected ZIP instead of the Web OS page's URL.
  */
-export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, entryPath: string): string {
+export function createAssetBridgeScript(
+  assetUrls: ReadonlyMap<string, string>,
+  currentPagePath: string,
+  defaultEntryPath = currentPagePath,
+  previewHostOrigin = '',
+  previewHostBasePath = '/',
+): string {
   const serializedAssets = JSON.stringify([...assetUrls.entries()])
     .replace(/</gu, '\\u003c')
     .replace(/\u2028/gu, '\\u2028')
     .replace(/\u2029/gu, '\\u2029');
-  const pageDirectory = JSON.stringify(entryPath.split('/').slice(0, -1).join('/'))
+  const pageDirectory = JSON.stringify(currentPagePath.split('/').slice(0, -1).join('/'))
+    .replace(/</gu, '\\u003c')
+    .replace(/\u2028/gu, '\\u2028')
+    .replace(/\u2029/gu, '\\u2029');
+  const currentPath = JSON.stringify(currentPagePath)
+    .replace(/</gu, '\\u003c')
+    .replace(/\u2028/gu, '\\u2028')
+    .replace(/\u2029/gu, '\\u2029');
+  const defaultPath = JSON.stringify(defaultEntryPath)
+    .replace(/</gu, '\\u003c')
+    .replace(/\u2028/gu, '\\u2028')
+    .replace(/\u2029/gu, '\\u2029');
+  const hostOrigin = JSON.stringify(previewHostOrigin)
+    .replace(/</gu, '\\u003c')
+    .replace(/\u2028/gu, '\\u2028')
+    .replace(/\u2029/gu, '\\u2029');
+  const hostBasePath = JSON.stringify(previewHostBasePath)
     .replace(/</gu, '\\u003c')
     .replace(/\u2028/gu, '\\u2028')
     .replace(/\u2029/gu, '\\u2029');
@@ -16,18 +38,25 @@ export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, 
   return `;(function(){
     var assets = new Map(${serializedAssets});
     var pageDirectory = ${pageDirectory};
+    var currentPagePath = ${currentPath};
+    var defaultEntryPath = ${defaultPath};
+    var previewHostOrigin = ${hostOrigin};
+    var previewHostBasePath = ${hostBasePath};
     var externalReference = /^(?:[a-z][a-z\\d+.-]*:|\\/\\/)/i;
 
-    function resolveAsset(reference) {
+    function resolveAsset(reference, isNavigation) {
       if (typeof reference !== 'string') return reference;
       var value = reference.trim();
-      if (!value || value.charAt(0) === '#' || externalReference.test(value)) return reference;
+      if (value.charAt(0) === '#' || externalReference.test(value)) return reference;
+      if (!value) return isNavigation ? (assets.get(currentPagePath) || reference) : reference;
 
       var suffixAt = value.search(/[?#]/);
       var path = suffixAt < 0 ? value : value.slice(0, suffixAt);
-      if (!path) return reference;
-      var hashAt = value.indexOf('#');
-      var hash = hashAt < 0 ? '' : value.slice(hashAt);
+      var suffix = suffixAt < 0 ? '' : value.slice(suffixAt);
+      if (!path) {
+        var currentPageUrl = isNavigation ? assets.get(currentPagePath) : undefined;
+        return currentPageUrl ? currentPageUrl + suffix : reference;
+      }
 
       try {
         path = decodeURIComponent(path).replace(/\\\\/g, '/');
@@ -48,9 +77,101 @@ export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, 
       });
       if (escapedRoot) return reference;
 
-      var assetUrl = assets.get(parts.join('/'));
-      return assetUrl ? assetUrl + hash : reference;
+      var resolvedPath = parts.join('/');
+      var assetUrl = assets.get(resolvedPath);
+      if (!assetUrl && isNavigation) {
+        var candidates = [];
+        if (!resolvedPath) {
+          candidates = ['index.html', 'index.htm', defaultEntryPath];
+        } else if (!/(?:^|\\/)[^/]+\\.[^/]+$/.test(resolvedPath)) {
+          if (path.charAt(path.length - 1) === '/') {
+            candidates = [resolvedPath + '/index.html', resolvedPath + '/index.htm', resolvedPath + '.html', resolvedPath + '.htm'];
+          } else {
+            candidates = [resolvedPath + '.html', resolvedPath + '.htm', resolvedPath + '/index.html', resolvedPath + '/index.htm'];
+          }
+        }
+        for (var index = 0; index < candidates.length && !assetUrl; index += 1) assetUrl = assets.get(candidates[index]);
+      }
+      return assetUrl ? assetUrl + suffix : reference;
     }
+
+    function localizeSameOriginReference(reference) {
+      if (typeof reference !== 'string' || !/^(?:https?:)?\\/\\//i.test(reference.trim()) || !previewHostOrigin || previewHostOrigin === 'null') return null;
+      try {
+        var target = new window.URL(reference.trim(), previewHostOrigin + previewHostBasePath);
+        if (target.origin !== previewHostOrigin) return null;
+        var path = target.pathname;
+        if (path === previewHostBasePath || path === previewHostBasePath.replace(/\\/$/, '') || path === '/') {
+          path = '/';
+        } else if (previewHostBasePath !== '/' && path.indexOf(previewHostBasePath) === 0) {
+          path = '/' + path.slice(previewHostBasePath.length);
+        }
+        return path + target.search + target.hash;
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function resolveNavigation(reference) {
+      var sameOriginReference = localizeSameOriginReference(String(reference));
+      if (sameOriginReference !== null) {
+        var localUrl = resolveAsset(sameOriginReference, true);
+        return localUrl === sameOriginReference ? '#zip-preview-route-not-found' : localUrl;
+      }
+      return resolveAsset(reference, true);
+    }
+
+    var locationPrototype = window.Location && window.Location.prototype;
+    if (locationPrototype) {
+      ['assign', 'replace'].forEach(function(method){
+        var nativeMethod = locationPrototype[method];
+        if (typeof nativeMethod !== 'function') return;
+        try {
+          locationPrototype[method] = function(reference){
+            return nativeMethod.call(this, resolveNavigation(String(reference)));
+          };
+        } catch (_error) {}
+      });
+      var hrefDescriptor = Object.getOwnPropertyDescriptor(locationPrototype, 'href');
+      if (hrefDescriptor && hrefDescriptor.configurable && typeof hrefDescriptor.set === 'function') {
+        try {
+          Object.defineProperty(locationPrototype, 'href', {
+            ...hrefDescriptor,
+            set: function(reference){
+              return hrefDescriptor.set.call(this, resolveNavigation(String(reference)));
+            }
+          });
+        } catch (_error) {}
+      }
+    }
+
+    window.__zipPreviewNavigate = function(reference){
+      var value = String(reference);
+      var mapped = resolveNavigation(value);
+      if (mapped === value && value.charAt(0) !== '#' && !externalReference.test(value)) return false;
+      try {
+        window.location.assign(mapped);
+        return true;
+      } catch (_error) {
+        return false;
+      }
+    };
+
+    ['pushState', 'replaceState'].forEach(function(method){
+      var history = window.history;
+      var nativeMethod = history && history[method];
+      if (typeof nativeMethod !== 'function') return;
+      try {
+        history[method] = function(state, title, url){
+          var mappedUrl = url;
+          if (typeof url === 'string') {
+            mappedUrl = resolveNavigation(url);
+            if (mappedUrl === url && url.charAt(0) !== '#' && !externalReference.test(url)) return;
+          }
+          return nativeMethod.call(this, state, title, mappedUrl);
+        };
+      } catch (_error) {}
+    });
 
     function resolveSrcset(value) {
       if (typeof value !== 'string' || /^data:/i.test(value.trim())) return value;
@@ -64,6 +185,9 @@ export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, 
     function resolveAttribute(element, name, value) {
       var attribute = String(name).toLowerCase();
       if (attribute === 'srcset') return resolveSrcset(String(value));
+      if (attribute === 'href' && element && (element.tagName === 'A' || element.tagName === 'AREA')) {
+        return resolveNavigation(String(value));
+      }
       if (attribute === 'src' || attribute === 'href' || attribute === 'poster' || attribute === 'action' || attribute === 'data') {
         return resolveAsset(String(value));
       }
@@ -97,11 +221,11 @@ export function createAssetBridgeScript(assetUrls: ReadonlyMap<string, string>, 
       [window.HTMLEmbedElement, 'src'],
       [window.HTMLInputElement, 'src'],
       [window.HTMLLinkElement, 'href'],
-      [window.HTMLAnchorElement, 'href'],
-      [window.HTMLAreaElement, 'href'],
       [window.HTMLFormElement, 'action'],
       [window.HTMLObjectElement, 'data']
     ].forEach(function(entry){ patchProperty(entry[0], entry[1], resolveAsset); });
+    patchProperty(window.HTMLAnchorElement, 'href', resolveNavigation);
+    patchProperty(window.HTMLAreaElement, 'href', resolveNavigation);
     patchProperty(window.HTMLImageElement, 'srcset', resolveSrcset);
     patchProperty(window.HTMLSourceElement, 'srcset', resolveSrcset);
 
@@ -243,6 +367,9 @@ export function createPreviewHydrationShell(appDocument: string, nonce: string, 
     }
 
     window.addEventListener('message', hydrate);
+    try {
+      window.parent.postMessage({ type: 'zip-preview-request-assets', nonce: nonce }, '*');
+    } catch (_error) {}
   })();`;
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escapedCsp}"><meta name="referrer" content="no-referrer"></head><body><p>Loading local ZIP files…</p><script id="zip-preview-app" type="application/json">${serializedAppDocument}</script><script>${bootstrap}</script></body></html>`;

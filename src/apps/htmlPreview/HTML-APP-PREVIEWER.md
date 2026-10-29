@@ -7,8 +7,9 @@ Upload a `.zip` containing a web app, choose an `.html` or `.htm` entry page, an
 - HTML, inline and local CSS, classic JavaScript, and JavaScript modules with relative imports where possible.
 - Local JavaScript libraries, stylesheets, images, icons, fonts, audio, and video stored inside the archive.
 - Relative asset paths created at runtime by JavaScript, including `new Audio(...)`, media/image `src` assignments, `fetch()`, and `XMLHttpRequest`.
-- Multiple HTML files, with `index.html` preferred automatically and a selector for other entry pages.
+- Multiple HTML files, with `index.html` preferred automatically and a selector for other entry pages. Local page links and common JavaScript location/history routes (including ZIP-root links, same-host absolute links, and `page.html` / `page/index.html`) stay inside the archive preview.
 - Optional HTTPS access for CDN scripts/styles and online APIs. This is disabled by default.
+- A dedicated fullscreen control for the preview frame.
 
 Local file references are resolved relative to the selected HTML page or the stylesheet/module that uses them. ZIPs are limited to 30 MB compressed, 80 MB expanded, and 3,000 files.
 
@@ -19,5 +20,6 @@ Some apps that require cookies, same-origin storage, service workers, or unsuppo
 
 ## State and routing
 - `main` → `HtmlPreviewApp`
+- ZIP-root and page-relative navigation is mapped to local archive files; the preview never uses the host page as a fallback base URL.
 - ZIP contents and iframe-scoped object URLs live only in memory and are released when the preview is closed or the app is left.
 - No settings screen or persistent user data is used.

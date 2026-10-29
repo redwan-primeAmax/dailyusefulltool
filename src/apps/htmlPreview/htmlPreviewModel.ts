@@ -52,6 +52,71 @@ export function resolveArchivePath(reference: string, fromPath: string): string 
   return parts.join('/');
 }
 
+/**
+ * Resolve an in-app navigation URL to a file in the uploaded site. Root-relative
+ * URLs are relative to the ZIP root (not the Web OS page hosting the preview),
+ * and extensionless routes support common static-hosting conventions.
+ */
+export function resolveArchivePagePath(
+  reference: string,
+  fromPath: string,
+  availablePaths: ReadonlySet<string>,
+  defaultEntryPath: string,
+): string | null {
+  const trimmed = reference.trim();
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/iu.test(trimmed) || trimmed.startsWith('#')) return null;
+
+  const pathOnly = trimmed.split(/[?#]/u, 1)[0];
+  if (!pathOnly) return availablePaths.has(fromPath) ? fromPath : defaultEntryPath;
+
+  const resolved = resolveArchivePath(trimmed, fromPath);
+  if (resolved === null) return null;
+  if (availablePaths.has(resolved)) return resolved;
+
+  if (!resolved) {
+    if (pathOnly.startsWith('/')) {
+      return ['index.html', 'index.htm', defaultEntryPath].find((path) => availablePaths.has(path)) ?? null;
+    }
+    return defaultEntryPath && availablePaths.has(defaultEntryPath) ? defaultEntryPath : null;
+  }
+
+  const hasTrailingSlash = /\/$/u.test(pathOnly);
+  // A path with an extension is an explicit file request. Do not silently
+  // reinterpret missing assets such as cover.png as an HTML page. A trailing
+  // slash still means “directory index,” even when the folder name has a dot.
+  if (!hasTrailingSlash && /(?:^|\/)[^/]+\.[^/]+$/u.test(resolved)) return null;
+
+  const candidates = hasTrailingSlash
+    ? [`${resolved}/index.html`, `${resolved}/index.htm`, `${resolved}.html`, `${resolved}.htm`]
+    : [`${resolved}.html`, `${resolved}.htm`, `${resolved}/index.html`, `${resolved}/index.htm`];
+  return candidates.find((path) => availablePaths.has(path)) ?? null;
+}
+
+/** Convert same-origin hosted URLs to ZIP-root paths for an isolated local preview. */
+export function resolveSameOriginArchiveReference(reference: string, parentLocation: string): string | null {
+  const trimmed = reference.trim();
+  if (!/^(?:https?:)?\/\//iu.test(trimmed)) return null;
+
+  try {
+    const parent = new URL(parentLocation);
+    const target = new URL(trimmed, parent);
+    if (target.origin !== parent.origin) return null;
+
+    const basePath = parent.pathname.endsWith('/')
+      ? parent.pathname
+      : parent.pathname.slice(0, parent.pathname.lastIndexOf('/') + 1) || '/';
+    let localPath = target.pathname;
+    if (target.pathname === parent.pathname || target.pathname === basePath || target.pathname === basePath.replace(/\/$/u, '')) {
+      localPath = '/';
+    } else if (basePath !== '/' && target.pathname.startsWith(basePath)) {
+      localPath = `/${target.pathname.slice(basePath.length)}`;
+    }
+    return `${localPath}${target.search}${target.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export function chooseDefaultEntrypoint(htmlPaths: string[]): string {
   const sorted = [...htmlPaths].sort((a, b) => a.localeCompare(b));
   return sorted.find((path) => path.toLowerCase() === 'index.html')

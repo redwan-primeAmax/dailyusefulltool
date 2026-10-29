@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type SyntheticEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react';
 import JSZip from 'jszip';
 import {
   AlertTriangle,
@@ -10,6 +10,8 @@ import {
   FileVideo2,
   Globe2,
   LoaderCircle,
+  Maximize2,
+  Minimize2,
   RefreshCw,
   ShieldCheck,
   Upload,
@@ -28,7 +30,9 @@ import {
   MAX_ZIP_SIZE_BYTES,
   mimeTypeForPath,
   normalizeArchivePath,
+  resolveArchivePagePath,
   resolveArchivePath,
+  resolveSameOriginArchiveReference,
 } from './htmlPreviewModel';
 
 interface ArchiveEntry {
@@ -59,8 +63,18 @@ function isExternalReference(reference: string): boolean {
 }
 
 function getSuffix(reference: string): string {
-  const hashIndex = reference.indexOf('#');
-  return hashIndex >= 0 ? reference.slice(hashIndex) : '';
+  const suffixIndex = reference.search(/[?#]/u);
+  return suffixIndex >= 0 ? reference.slice(suffixIndex) : '';
+}
+
+function getPreviewHostBasePath(pathname: string): string {
+  if (pathname.endsWith('/')) return pathname;
+  return pathname.slice(0, pathname.lastIndexOf('/') + 1) || '/';
+}
+
+function sameOriginArchiveReference(reference: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return resolveSameOriginArchiveReference(reference, window.location.href);
 }
 
 function mapReference(
@@ -78,6 +92,50 @@ function mapReference(
   if (!path) return null;
   const url = /\.css$/iu.test(path) ? cssUrlForPath(path, cssAncestors) : rawUrls.get(path);
   return url ? `${url}${getSuffix(trimmed)}` : null;
+}
+
+function mapPageReference(
+  reference: string,
+  fromPath: string,
+  availablePaths: ReadonlySet<string>,
+  defaultEntryPath: string,
+  pageUrls: ReadonlyMap<string, string>,
+  rawUrls: Map<string, string>,
+  cssUrlForPath: (path: string, ancestors?: Set<string>) => string | undefined,
+): string | null {
+  const trimmed = reference.trim();
+  if (!trimmed) {
+    const currentPageUrl = pageUrls.get(fromPath);
+    return currentPageUrl ?? mapReference(reference, fromPath, rawUrls, cssUrlForPath);
+  }
+  if (trimmed.startsWith('#')) return trimmed;
+  const sameOriginReference = sameOriginArchiveReference(trimmed);
+  if (isExternalReference(trimmed) && sameOriginReference === null) return trimmed;
+  const archiveReference = sameOriginReference ?? trimmed;
+
+  const pagePath = resolveArchivePagePath(archiveReference, fromPath, availablePaths, defaultEntryPath);
+  if (!pagePath) return null;
+  const pageUrl = pageUrls.get(pagePath);
+  if (pageUrl) return `${pageUrl}${getSuffix(archiveReference)}`;
+  return mapReference(archiveReference, fromPath, rawUrls, cssUrlForPath);
+}
+
+function rewriteNavigationLiterals(source: string): string {
+  const replaceTarget = (_match: string, _prefix: string, _quote: string, target: string) =>
+    `window.__zipPreviewNavigate(${JSON.stringify(target)})`;
+  let rewritten = source.replace(
+    /(\b(?:(?:window|document)\s*\.\s*)?location\s*\.\s*href\s*=\s*)(["'`])([^"'`]+)\2/gu,
+    replaceTarget,
+  );
+  rewritten = rewritten.replace(
+    /(\b(?:(?:window|document)\s*\.\s*)?location\s*\.\s*(?:assign|replace)\s*\(\s*)(["'`])([^"'`]+)\2/gu,
+    replaceTarget,
+  );
+  rewritten = rewritten.replace(
+    /(\b(?:(?:window|document)\s*\.\s*)?location\s*=\s*)(["'`])([^"'`]+)\2/gu,
+    replaceTarget,
+  );
+  return rewritten;
 }
 
 function rewriteCss(
@@ -128,7 +186,7 @@ function buildCsp(allowNetwork: boolean): string {
     `worker-src blob: data:${network}`,
     `form-action 'self' blob: data:${network}`,
     "object-src 'none'",
-    "base-uri 'none'",
+    'base-uri blob:',
   ].join('; ');
 }
 
@@ -136,8 +194,8 @@ export function HtmlPreviewApp() {
   const { notify } = useOS();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const previewStageRef = useRef<HTMLDivElement>(null);
   const previewBundleRef = useRef<PreviewAssetBundle | null>(null);
-  const lastSentBundleRef = useRef('');
   const mounted = useRef(true);
   const [archive, setArchive] = useState<PreviewArchive | null>(null);
   const [entryPath, setEntryPath] = useState('');
@@ -146,6 +204,7 @@ export function HtmlPreviewApp() {
   const [allowNetwork, setAllowNetwork] = useState(false);
   const [loading, setLoading] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [previewFullscreen, setPreviewFullscreen] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -156,20 +215,43 @@ export function HtmlPreviewApp() {
     };
   }, []);
 
-  const handlePreviewFrameLoad = (event?: SyntheticEvent<HTMLIFrameElement>) => {
-    const bundle = previewBundleRef.current;
-    const target = event?.currentTarget.contentWindow ?? previewFrameRef.current?.contentWindow;
-    if (!bundle || !target) return;
+  useEffect(() => {
+    const syncFullscreenState = () => setPreviewFullscreen(document.fullscreenElement === previewStageRef.current);
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
 
-    const deliveryKey = `${bundle.nonce}:${previewVersion}`;
-    if (lastSentBundleRef.current === deliveryKey) return;
+  useEffect(() => {
+    const handleAssetRequest = (event: MessageEvent) => {
+      const bundle = previewBundleRef.current;
+      const target = previewFrameRef.current?.contentWindow;
+      if (!bundle || !target || event.source !== target) return;
+
+      const message = event.data as { type?: unknown; nonce?: unknown } | null;
+      if (message?.type !== 'zip-preview-request-assets' || message.nonce !== bundle.nonce) return;
+
+      try {
+        target.postMessage({ type: 'zip-preview-assets', nonce: bundle.nonce, assets: bundle.assets }, '*');
+      } catch {
+        setError('The browser could not pass the local ZIP files into the isolated preview. Reload the preview or try a smaller ZIP.');
+        notify({ title: 'Could not start preview', description: 'The browser could not pass the local ZIP files into the isolated preview.', tone: 'danger' });
+      }
+    };
+
+    window.addEventListener('message', handleAssetRequest);
+    return () => window.removeEventListener('message', handleAssetRequest);
+  }, [notify]);
+
+  const togglePreviewFullscreen = async () => {
+    const stage = previewStageRef.current;
+    if (!stage) return;
 
     try {
-      target.postMessage({ type: 'zip-preview-assets', nonce: bundle.nonce, assets: bundle.assets }, '*');
-      lastSentBundleRef.current = deliveryKey;
+      if (document.fullscreenElement === stage) await document.exitFullscreen();
+      else await stage.requestFullscreen();
     } catch {
-      setError('The browser could not pass the local ZIP files into the isolated preview. Reload the preview or try a smaller ZIP.');
-      notify({ title: 'Could not start preview', description: 'The browser could not pass the local ZIP files into the isolated preview.', tone: 'danger' });
+      setError('Fullscreen is not available in this browser. Try the browser menu’s fullscreen option.');
+      notify({ title: 'Could not enter fullscreen', description: 'This browser blocked fullscreen for the preview.', tone: 'danger' });
     }
   };
 
@@ -324,7 +406,7 @@ export function HtmlPreviewApp() {
           /(\bimport\s*\(\s*)(["'])([^'"]+)\2(\s*\))/gu,
           (_match, before: string, quote: string, specifier: string, after: string) => `${before}${quote}${rewriteImport(specifier)}${quote}${after}`,
         );
-        return rewritten;
+        return rewriteNavigationLiterals(rewritten);
       }
 
       function moduleUrlForPath(path: string, ancestors = new Set<string>()): string {
@@ -342,142 +424,221 @@ export function HtmlPreviewApp() {
         return url;
       }
 
-      const htmlSource = textSources.get(entryPath);
-      if (htmlSource === undefined) throw new Error('The selected HTML page could not be read.');
-      const parsed = new DOMParser().parseFromString(htmlSource, 'text/html');
-      parsed.querySelectorAll('base').forEach((base) => base.remove());
-      parsed.querySelectorAll('meta[http-equiv]').forEach((meta) => {
-        const policy = meta.getAttribute('http-equiv')?.trim().toLowerCase();
-        if (policy === 'content-security-policy' || policy === 'content-security-policy-report-only') meta.remove();
-      });
+      const availablePaths = new Set(previewArchive.entries.keys());
+      const pageUrls = new Map<string, string>();
+      for (const path of previewArchive.htmlPaths) {
+        const url = rawUrls.get(path);
+        if (url) pageUrls.set(path, url);
+      }
 
-      parsed.querySelectorAll('script[type="importmap"]').forEach((script) => {
-        try {
-          const importMap = JSON.parse(script.textContent ?? '') as { imports?: Record<string, string> };
-          if (importMap.imports) {
-            for (const [specifier, target] of Object.entries(importMap.imports)) {
-              if (!target.endsWith('/')) {
-                const mapped = mapReference(target, entryPath, rawUrls, cssUrlForPath);
-                if (mapped) importMap.imports[specifier] = mapped;
+      const processedClassicUrls = new Map<string, string>();
+      function classicScriptUrlForPath(path: string): string {
+        const existing = processedClassicUrls.get(path);
+        if (existing) return existing;
+        const source = textSources.get(path);
+        if (source === undefined) return rawUrls.get(path) ?? '';
+        const rewritten = rewriteNavigationLiterals(source);
+        const url = registerAsset(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' }));
+        processedClassicUrls.set(path, url);
+        return url;
+      }
+
+      const csp = buildCsp(allowNetwork);
+      const previewHostUrl = new URL(window.location.href);
+      const previewHostBasePath = getPreviewHostBasePath(previewHostUrl.pathname);
+      let appDocument = '';
+
+      // Give every local HTML page its own inert shell. Navigating to one then
+      // hydrates it inside the sandbox with a fresh set of iframe-local Blob URLs.
+      for (const pagePath of previewArchive.htmlPaths) {
+        const htmlSource = textSources.get(pagePath);
+        const pageToken = pageUrls.get(pagePath);
+        if (htmlSource === undefined || !pageToken) continue;
+
+        const parsed = new DOMParser().parseFromString(htmlSource, 'text/html');
+        parsed.querySelectorAll('base').forEach((base) => base.remove());
+        parsed.querySelectorAll('meta[http-equiv]').forEach((meta) => {
+          const policy = meta.getAttribute('http-equiv')?.trim().toLowerCase();
+          if (policy === 'content-security-policy' || policy === 'content-security-policy-report-only') meta.remove();
+        });
+
+        parsed.querySelectorAll('script[type="importmap"]').forEach((script) => {
+          try {
+            const importMap = JSON.parse(script.textContent ?? '') as { imports?: Record<string, string> };
+            if (importMap.imports) {
+              for (const [specifier, target] of Object.entries(importMap.imports)) {
+                if (!target.endsWith('/')) {
+                  const mapped = mapReference(target, pagePath, rawUrls, cssUrlForPath);
+                  if (mapped) importMap.imports[specifier] = mapped;
+                }
               }
+              script.textContent = JSON.stringify(importMap);
             }
-            script.textContent = JSON.stringify(importMap);
+          } catch {
+            // The browser will report malformed import maps inside the sandbox.
           }
-        } catch {
-          // The browser will report malformed import maps inside the sandbox.
-        }
-      });
+        });
 
-      parsed.querySelectorAll('script[src]').forEach((script) => {
-        const source = script.getAttribute('src') ?? '';
-        if (isExternalReference(source)) return;
-        const path = resolveArchivePath(source, entryPath);
-        if (!path || !previewArchive.entries.has(path)) {
-          script.removeAttribute('src');
+        parsed.querySelectorAll('script[src]').forEach((script) => {
+          const source = script.getAttribute('src') ?? '';
+          if (isExternalReference(source)) return;
+          const path = resolveArchivePath(source, pagePath);
+          if (!path || !previewArchive.entries.has(path)) {
+            script.removeAttribute('src');
+            script.textContent = '';
+            return;
+          }
+          const isModule = script.getAttribute('type')?.trim().toLowerCase() === 'module';
+          script.setAttribute('src', isModule ? moduleUrlForPath(path) : classicScriptUrlForPath(path));
+          script.removeAttribute('crossorigin');
+          script.removeAttribute('integrity');
+        });
+
+        parsed.querySelectorAll('script[type="module"]:not([src])').forEach((script) => {
+          const source = script.textContent ?? '';
+          if (!source.trim()) return;
+          const rewritten = rewriteModuleSource(source, pagePath, new Set([pagePath]));
+          script.setAttribute('src', registerAsset(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' })));
           script.textContent = '';
-          return;
-        }
-        const isModule = script.getAttribute('type')?.trim().toLowerCase() === 'module';
-        script.setAttribute('src', isModule ? moduleUrlForPath(path) : (rawUrls.get(path) ?? ''));
-        script.removeAttribute('crossorigin');
-        script.removeAttribute('integrity');
-      });
+        });
 
-      parsed.querySelectorAll('script[type="module"]:not([src])').forEach((script) => {
-        const source = script.textContent ?? '';
-        if (!source.trim()) return;
-        const rewritten = rewriteModuleSource(source, entryPath, new Set([entryPath]));
-        script.setAttribute('src', registerAsset(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' })));
-        script.textContent = '';
-      });
+        parsed.querySelectorAll('script:not([src]):not([type="importmap"])').forEach((script) => {
+          const type = script.getAttribute('type')?.trim().toLowerCase() ?? '';
+          if (type === 'module' || (type && !/^(?:text|application)\/(?:java|ecma)script$/u.test(type))) return;
+          script.textContent = rewriteNavigationLiterals(script.textContent ?? '');
+        });
+        parsed.querySelectorAll('*').forEach((element) => {
+          for (const attribute of Array.from(element.attributes)) {
+            if (/^on[a-z]+$/iu.test(attribute.name)) {
+              element.setAttribute(attribute.name, rewriteNavigationLiterals(attribute.value));
+            }
+          }
+        });
 
-      parsed.querySelectorAll('link[href]').forEach((link) => {
-        const href = link.getAttribute('href') ?? '';
-        if (isExternalReference(href) || href.startsWith('#')) return;
-        const path = resolveArchivePath(href, entryPath);
-        if (!path) {
-          link.removeAttribute('href');
-          return;
-        }
-        const isStylesheet = (link.getAttribute('rel') ?? '').toLowerCase().split(/\s+/u).includes('stylesheet');
-        const url = isStylesheet ? cssUrlForPath(path) : rawUrls.get(path);
-        if (url) {
-          link.setAttribute('href', `${url}${getSuffix(href)}`);
-          link.removeAttribute('crossorigin');
-          link.removeAttribute('integrity');
-        } else link.removeAttribute('href');
-      });
-
-      parsed.querySelectorAll('img[src], audio[src], video[src], source[src], track[src], embed[src], iframe[src], input[src], a[href], form[action], video[poster], object[data]').forEach((element) => {
-        for (const attribute of ['src', 'href', 'action', 'poster', 'data']) {
-          const current = element.getAttribute(attribute);
-          if (current === null || (attribute === 'href' && element.tagName === 'LINK')) continue;
-          if (isExternalReference(current) || current.startsWith('#')) continue;
-          const url = mapReference(current, entryPath, rawUrls, cssUrlForPath);
+        parsed.querySelectorAll('link[href]').forEach((link) => {
+          const href = link.getAttribute('href') ?? '';
+          if (isExternalReference(href) || href.startsWith('#')) return;
+          const path = resolveArchivePath(href, pagePath);
+          if (!path) {
+            link.removeAttribute('href');
+            return;
+          }
+          const isStylesheet = (link.getAttribute('rel') ?? '').toLowerCase().split(/\s+/u).includes('stylesheet');
+          const url = isStylesheet ? cssUrlForPath(path) : rawUrls.get(path);
           if (url) {
-            element.setAttribute(attribute, url);
-            element.removeAttribute('crossorigin');
-            element.removeAttribute('integrity');
-          } else element.removeAttribute(attribute);
+            link.setAttribute('href', `${url}${getSuffix(href)}`);
+            link.removeAttribute('crossorigin');
+            link.removeAttribute('integrity');
+          } else link.removeAttribute('href');
+        });
+
+        parsed.querySelectorAll('img[src], audio[src], video[src], source[src], track[src], embed[src], iframe[src], input[src], a[href], area[href], form[action], video[poster], object[data]').forEach((element) => {
+          if (element.tagName === 'A' || element.tagName === 'AREA') {
+            const current = element.getAttribute('href') ?? '';
+            const url = mapPageReference(current, pagePath, availablePaths, entryPath, pageUrls, rawUrls, cssUrlForPath);
+            if (url) {
+              element.setAttribute('href', url);
+              element.removeAttribute('crossorigin');
+              element.removeAttribute('integrity');
+            } else element.removeAttribute('href');
+            // The app remains inside this isolated frame. In particular, avoid
+            // blocked _blank/_top links that otherwise appear to do nothing.
+            element.setAttribute('target', '_self');
+            return;
+          }
+
+          for (const attribute of ['src', 'href', 'action', 'poster', 'data']) {
+            const current = element.getAttribute(attribute);
+            if (current === null || (attribute === 'href' && element.tagName === 'LINK')) continue;
+            if (isExternalReference(current) || current.startsWith('#')) continue;
+            const url = mapReference(current, pagePath, rawUrls, cssUrlForPath);
+            if (url) {
+              element.setAttribute(attribute, url);
+              element.removeAttribute('crossorigin');
+              element.removeAttribute('integrity');
+            } else element.removeAttribute(attribute);
+          }
+        });
+
+        parsed.querySelectorAll('[srcset]').forEach((element) => {
+          const srcset = element.getAttribute('srcset') ?? '';
+          if (/^data:/iu.test(srcset.trim())) return;
+          const rewritten = srcset.split(',').map((candidate) => {
+            const [reference, ...descriptor] = candidate.trim().split(/\s+/u);
+            if (!reference) return candidate;
+            const url = mapReference(reference, pagePath, rawUrls, cssUrlForPath);
+            return url ? [url, ...descriptor].join(' ') : '';
+          }).filter(Boolean).join(', ');
+          if (rewritten) element.setAttribute('srcset', rewritten);
+          else element.removeAttribute('srcset');
+        });
+
+        parsed.querySelectorAll('style').forEach((style) => {
+          style.textContent = rewriteCss(style.textContent ?? '', pagePath, rawUrls, cssUrlForPath, new Set());
+        });
+        parsed.querySelectorAll('[style]').forEach((element) => {
+          const style = element.getAttribute('style');
+          if (style) element.setAttribute('style', rewriteCss(style, pagePath, rawUrls, cssUrlForPath, new Set()));
+        });
+
+        const cspMeta = parsed.createElement('meta');
+        cspMeta.httpEquiv = 'Content-Security-Policy';
+        cspMeta.content = csp;
+        parsed.head.prepend(cspMeta);
+
+        const referrer = parsed.createElement('meta');
+        referrer.name = 'referrer';
+        referrer.content = 'no-referrer';
+        parsed.head.append(referrer);
+
+        if (!parsed.querySelector('meta[name="viewport"]')) {
+          const viewport = parsed.createElement('meta');
+          viewport.name = 'viewport';
+          viewport.content = 'width=device-width, initial-scale=1';
+          parsed.head.append(viewport);
         }
-      });
 
-      parsed.querySelectorAll('[srcset]').forEach((element) => {
-        const srcset = element.getAttribute('srcset') ?? '';
-        if (/^data:/iu.test(srcset.trim())) return;
-        const rewritten = srcset.split(',').map((candidate) => {
-          const [reference, ...descriptor] = candidate.trim().split(/\s+/u);
-          if (!reference) return candidate;
-          const url = mapReference(reference, entryPath, rawUrls, cssUrlForPath);
-          return url ? [url, ...descriptor].join(' ') : '';
-        }).filter(Boolean).join(', ');
-        if (rewritten) element.setAttribute('srcset', rewritten);
-        else element.removeAttribute('srcset');
-      });
+        // Runtime-created style links need the rewritten CSS Blobs; local links
+        // to HTML pages resolve to their corresponding hydration shells.
+        for (const path of textSources.keys()) {
+          if (/\.css$/iu.test(path)) cssUrlForPath(path);
+        }
+        const runtimeAssetUrls = new Map(rawUrls);
+        processedCssUrls.forEach((url, path) => runtimeAssetUrls.set(path, url));
+        processedClassicUrls.forEach((url, path) => runtimeAssetUrls.set(path, url));
+        processedModuleUrls.forEach((url, path) => runtimeAssetUrls.set(path, url));
 
-      parsed.querySelectorAll('style').forEach((style) => {
-        style.textContent = rewriteCss(style.textContent ?? '', entryPath, rawUrls, cssUrlForPath, new Set());
-      });
-      parsed.querySelectorAll('[style]').forEach((element) => {
-        const style = element.getAttribute('style');
-        if (style) element.setAttribute('style', rewriteCss(style, entryPath, rawUrls, cssUrlForPath, new Set()));
-      });
+        const assetBridge = parsed.createElement('script');
+        assetBridge.textContent = createAssetBridgeScript(
+          runtimeAssetUrls,
+          pagePath,
+          entryPath,
+          previewHostUrl.origin,
+          previewHostBasePath,
+        );
+        const firstPageScript = parsed.head.querySelector('script');
+        if (firstPageScript) firstPageScript.before(assetBridge);
+        else parsed.head.append(assetBridge);
 
-      const csp = parsed.createElement('meta');
-      csp.httpEquiv = 'Content-Security-Policy';
-      csp.content = buildCsp(allowNetwork);
-      parsed.head.prepend(csp);
+        if (!parsed.title) parsed.title = pagePath.split('/').pop() ?? previewArchive.name;
 
-      const referrer = parsed.createElement('meta');
-      referrer.name = 'referrer';
-      referrer.content = 'no-referrer';
-      parsed.head.append(referrer);
+        const pageDocument = `<!doctype html>\n${parsed.documentElement.outerHTML}`;
+        const pageShell = createPreviewHydrationShell(pageDocument, bundleNonce, csp);
+        assetBlobs.set(pageToken, new Blob([pageShell], { type: 'text/html; charset=utf-8' }));
 
-      if (!parsed.querySelector('meta[name="viewport"]')) {
-        const viewport = parsed.createElement('meta');
-        viewport.name = 'viewport';
-        viewport.content = 'width=device-width, initial-scale=1';
-        parsed.head.append(viewport);
+        if (pagePath === entryPath) {
+          // srcdoc inherits the parent URL as its base. Point it at a sandbox-
+          // local Blob so root-relative misses can never escape to the Web OS.
+          const safeBase = parsed.createElement('base');
+          safeBase.setAttribute('href', pageToken);
+          parsed.head.prepend(safeBase);
+          appDocument = `<!doctype html>\n${parsed.documentElement.outerHTML}`;
+        }
       }
-      // The runtime bridge must also map dynamically-created stylesheet links to
-      // the rewritten CSS Blobs, not to the unprocessed archive bytes.
-      for (const path of textSources.keys()) {
-        if (/\.css$/iu.test(path)) cssUrlForPath(path);
-      }
-      const runtimeAssetUrls = new Map(rawUrls);
-      processedCssUrls.forEach((url, path) => runtimeAssetUrls.set(path, url));
 
-      const assetBridge = parsed.createElement('script');
-      assetBridge.textContent = createAssetBridgeScript(runtimeAssetUrls, entryPath);
-      const firstPageScript = parsed.head.querySelector('script');
-      if (firstPageScript) firstPageScript.before(assetBridge);
-      else parsed.head.append(assetBridge);
-
-      if (!parsed.title) parsed.title = entryPath.split('/').pop() ?? previewArchive.name;
-
-      const appDocument = `<!doctype html>\n${parsed.documentElement.outerHTML}`;
+      if (!appDocument) throw new Error('The selected HTML page could not be prepared.');
       previewBundleRef.current = { nonce: bundleNonce, assets: [...assetBlobs.entries()] };
-      setPreviewDocument(createPreviewHydrationShell(appDocument, bundleNonce, csp.content));
+      setPreviewDocument(createPreviewHydrationShell(appDocument, bundleNonce, csp));
       notify({
         title: 'Preview ready',
         description: `${entryPath} · ${allowNetwork ? 'HTTPS network enabled' : 'offline sandbox'}`,
@@ -554,6 +715,14 @@ export function HtmlPreviewApp() {
             </button>
             <button
               type="button"
+              onClick={() => void togglePreviewFullscreen()}
+              aria-label={previewFullscreen ? 'Exit fullscreen preview' : 'View preview fullscreen'}
+              className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface2 text-ink2 hover:text-accent"
+            >
+              {previewFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+            <button
+              type="button"
               onClick={leavePreview}
               aria-label="Return to ZIP settings"
               className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface2 text-ink2 hover:text-accent"
@@ -568,17 +737,36 @@ export function HtmlPreviewApp() {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-2xl border border-hairline bg-white shadow-2xl shadow-black/20">
+          <div
+            ref={previewStageRef}
+            className={cn(
+              'relative overflow-hidden rounded-2xl border border-hairline bg-white shadow-2xl shadow-black/20',
+              previewFullscreen && 'flex h-[100dvh] w-screen flex-col rounded-none border-0 bg-black shadow-none',
+            )}
+          >
             <iframe
               key={previewVersion}
               ref={previewFrameRef}
               title={`Preview of ${htmlEntryLabel}`}
               sandbox="allow-scripts allow-forms"
+              allow="fullscreen"
               referrerPolicy="no-referrer"
               srcDoc={previewDocument}
-              onLoad={handlePreviewFrameLoad}
-              className="block h-[68vh] min-h-[420px] w-full bg-white"
+              className={cn(
+                'block w-full bg-white',
+                previewFullscreen ? 'h-full min-h-0 flex-1' : 'h-[68vh] min-h-[420px]',
+              )}
             />
+            {previewFullscreen && (
+              <button
+                type="button"
+                onClick={() => void togglePreviewFullscreen()}
+                aria-label="Exit fullscreen preview"
+                className="absolute right-3 top-3 z-50 grid size-11 place-items-center rounded-full border border-white/20 bg-black/75 text-white shadow-xl backdrop-blur-sm"
+              >
+                <Minimize2 className="size-5" />
+              </button>
+            )}
           </div>
           <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] leading-4 text-ink3">
             <ShieldCheck className="size-3.5 shrink-0 text-emerald-400" />
