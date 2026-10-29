@@ -104,6 +104,12 @@ F. **Names with full paths** — lists each selected file name alongside its ful
 Files are processed in memory in the browser. The archive and its contents are not uploaded or persisted by this app.
 `,
   },
+  {
+    id: 'htmlpreview',
+    title: 'HTML App Previewer',
+    path: 'apps/htmlPreview/HTML-APP-PREVIEWER.md',
+    content: `# HTML App Previewer\n\n## Workflow\n1. Choose or drop a web-app ZIP.\n2. Select the HTML entry page (the app prefers \`index.html\`).\n3. Press **Done · Preview app** to create a local, sandboxed iframe preview.\n\n## Content support\nSupports HTML, CSS, classic JavaScript, JavaScript modules with relative imports where possible, local JavaScript libraries, and local image, icon, font, audio, and video assets. Local paths are resolved relative to the HTML page, stylesheet, or module that references them. External HTTPS scripts, styles, and API requests can be enabled explicitly; network access is off by default.\n\nZIP limits are 30 MB compressed, 80 MB expanded, and 3,000 files.\n\n## Sandbox and privacy\nThe archive is processed only in browser memory and is not uploaded or stored. Preview runs with iframe sandboxing and a restrictive Content Security Policy. It has no same-origin access to the parent app, top navigation, or popups. Only enable network access when the app requires a trusted CDN or API.\n\nApps that depend on cookies, same-origin storage, service workers, or unsupported module/package resolution may not work in the isolated preview.\n`,
+  },
   { id: 'triver', title: 'Triver', path: 'apps/triver/TRIVER.md' },
 
 ];

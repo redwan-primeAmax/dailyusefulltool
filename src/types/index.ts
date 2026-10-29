@@ -29,6 +29,7 @@ export type AppId =
   | 'wordcounter'
   | 'pdftoimages'
   | 'texttospeech'
+  | 'htmlpreview'
   | 'addiction';
 
 export type ScreenId = 'main' | 'settings';

@@ -1,7 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import {
   Activity, BookOpen, BookOpenCheck, CheckSquare, CloudSun, Droplets, Flame, Gamepad2,
-  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage, Volume2,
+  GraduationCap, HeartHandshake, Package, Sigma, Store, Timer, Wallet, Wind, FileArchive, FileText, FileImage, Volume2, Code2,
 } from 'lucide-react';
 import type { AppManifest } from '../types';
 import { AppAboutSettings } from '../components/ui/AppAboutSettings';
@@ -44,6 +44,7 @@ const TriverApp = lazyScreen(() => import('./triver/TriverApp').then(({ TriverAp
 const TriverSettings = lazyScreen(() => import('./triver/TriverSettings').then(({ TriverSettings }) => ({ default: TriverSettings })));
 const TodoSettings = lazyScreen(() => import('./todo/TodoSettings').then(({ TodoSettings }) => ({ default: TodoSettings })));
 const ZipProcessorApp = lazyScreen(() => import('./zipProcessor/ZipProcessorApp').then(({ ZipProcessorApp }) => ({ default: ZipProcessorApp })));
+const HtmlPreviewApp = lazyScreen(() => import('./htmlPreview/HtmlPreviewApp').then(({ HtmlPreviewApp }) => ({ default: HtmlPreviewApp })));
 const WordCounterApp = lazyScreen(() => import('./wordCounter/WordCounterApp').then(({ WordCounterApp }) => ({ default: WordCounterApp })));
 const PdfToImagesApp = lazyScreen(() => import('./pdfToImages/PdfToImagesApp').then(({ PdfToImagesApp }) => ({ default: PdfToImagesApp })));
 const TextToSpeechApp = lazyScreen(() => import('./textToSpeech/TextToSpeechApp').then(({ TextToSpeechApp }) => ({ default: TextToSpeechApp })));
@@ -282,6 +283,15 @@ export const APP_CATALOG: AppManifest[] = [
     highlights: ['Select or deselect files before export', 'Skips binary, system, and config files by default', 'Six output formats including full ZIP architecture', 'Runs locally in your browser'],
     accent: '#0ea5e9', gradient: 'from-blue-500 to-indigo-600', icon: FileArchive, core: false,
     screens: [{ id: 'main', component: ZipProcessorApp }],
+  },
+  {
+    id: 'htmlpreview', name: 'HTML App Previewer', shortName: 'HTML Preview', developer: 'Web OS Labs',
+    category: 'Tools', subcategory: 'Developer tools', kind: 'app', version: '1.0.0', sizeMb: 6,
+    rating: 0, reviews: 'New', installs: '—', updatedAt: 32,
+    description: 'Upload a web-app ZIP, choose its HTML entry page, then run HTML, CSS, JavaScript, local libraries, and media files in a sandboxed preview.',
+    highlights: ['Finds index.html automatically and supports multiple entry pages', 'Resolves local scripts, styles, images, audio, video and fonts', 'Optional HTTPS access for CDN libraries and APIs', 'Runs locally in a restricted iframe sandbox'],
+    accent: '#06b6d4', gradient: 'from-cyan-400 to-blue-600', icon: Code2, core: false,
+    screens: [{ id: 'main', component: HtmlPreviewApp }],
   },
 ];
 
