@@ -19,6 +19,7 @@ import { CustomButton } from '../../components/CustomButton';
 import { ScreenShell } from '../../components/ui/ScreenShell';
 import { useOS } from '../../context/OSContext';
 import { cn } from '../../utils/cn';
+import { createAssetBridgeScript } from './assetBridge';
 import {
   chooseDefaultEntrypoint,
   formatPreviewSize,
@@ -244,22 +245,27 @@ export function HtmlPreviewApp() {
     setBuilding(true);
 
     try {
-      const fileBytes = new Map<string, Uint8Array>();
+      const rawUrls = new Map<string, string>();
       let actualSize = 0;
       for (const file of previewArchive.entries.values()) {
-        const bytes = await file.zipFile.async('uint8array');
+        const content = await file.zipFile.async('blob');
         if (!mounted.current) return;
-        actualSize += bytes.byteLength;
+        actualSize += content.size;
         if (actualSize > MAX_UNCOMPRESSED_SIZE_BYTES) {
           throw new Error(`The extracted app is larger than the ${formatPreviewSize(MAX_UNCOMPRESSED_SIZE_BYTES)} preview limit.`);
         }
-        fileBytes.set(file.path, bytes);
+        const typedContent = content.slice(0, content.size, mimeTypeForPath(file.path));
+        rawUrls.set(file.path, createObjectUrl(typedContent));
       }
 
-      const rawUrls = new Map<string, string>();
-      for (const [path, bytes] of fileBytes) {
-        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-        rawUrls.set(path, createObjectUrl(new Blob([buffer], { type: mimeTypeForPath(path) })));
+      // Only retain source text for code and stylesheets. Binary assets (including
+      // large audio collections) stay as Blobs instead of duplicating every byte
+      // in a second Uint8Array map while the preview is being prepared.
+      const textSources = new Map<string, string>();
+      for (const file of previewArchive.entries.values()) {
+        if (!/\.(?:html?|css|m?js|cjs)$/iu.test(file.path)) continue;
+        textSources.set(file.path, await file.zipFile.async('string'));
+        if (!mounted.current) return;
       }
 
       const processedCssUrls = new Map<string, string>();
@@ -267,12 +273,11 @@ export function HtmlPreviewApp() {
         const existing = processedCssUrls.get(path);
         if (existing) return existing;
         if (ancestors.has(path)) return rawUrls.get(path);
-        const bytes = fileBytes.get(path);
-        if (!bytes) return undefined;
+        const source = textSources.get(path);
+        if (source === undefined) return undefined;
 
         const nextAncestors = new Set(ancestors);
         nextAncestors.add(path);
-        const source = new TextDecoder('utf-8').decode(bytes);
         const css = rewriteCss(source, path, rawUrls, cssUrlForPath, nextAncestors);
         const url = createObjectUrl(new Blob([css], { type: 'text/css; charset=utf-8' }));
         processedCssUrls.set(path, url);
@@ -306,21 +311,19 @@ export function HtmlPreviewApp() {
         const existing = processedModuleUrls.get(path);
         if (existing) return existing;
         if (ancestors.has(path)) return rawUrls.get(path) ?? '';
-        const bytes = fileBytes.get(path);
-        if (!bytes) return rawUrls.get(path) ?? '';
+        const source = textSources.get(path);
+        if (source === undefined) return rawUrls.get(path) ?? '';
 
         const nextAncestors = new Set(ancestors);
         nextAncestors.add(path);
-        const source = new TextDecoder('utf-8').decode(bytes);
         const rewritten = rewriteModuleSource(source, path, nextAncestors);
         const url = createObjectUrl(new Blob([rewritten], { type: 'text/javascript; charset=utf-8' }));
         processedModuleUrls.set(path, url);
         return url;
       }
 
-      const htmlBytes = fileBytes.get(entryPath);
-      if (!htmlBytes) throw new Error('The selected HTML page could not be read.');
-      const htmlSource = new TextDecoder('utf-8').decode(htmlBytes);
+      const htmlSource = textSources.get(entryPath);
+      if (htmlSource === undefined) throw new Error('The selected HTML page could not be read.');
       const parsed = new DOMParser().parseFromString(htmlSource, 'text/html');
       parsed.querySelectorAll('base').forEach((base) => base.remove());
 
@@ -432,6 +435,12 @@ export function HtmlPreviewApp() {
         viewport.content = 'width=device-width, initial-scale=1';
         parsed.head.append(viewport);
       }
+      const assetBridge = parsed.createElement('script');
+      assetBridge.textContent = createAssetBridgeScript(rawUrls, entryPath);
+      const firstPageScript = parsed.head.querySelector('script');
+      if (firstPageScript) firstPageScript.before(assetBridge);
+      else parsed.head.append(assetBridge);
+
       if (!parsed.title) parsed.title = entryPath.split('/').pop() ?? previewArchive.name;
 
       setPreviewDocument(`<!doctype html>\n${parsed.documentElement.outerHTML}`);
@@ -545,7 +554,7 @@ export function HtmlPreviewApp() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.17em] text-cyan-200/70">Local web app runner</p>
                 <h2 className="mt-1 text-xl font-black text-white">Drop in a ZIP. Preview the app.</h2>
-                <p className="mt-1 text-sm leading-5 text-slate-400">HTML, CSS, JavaScript, libraries and local images, audio, and video are resolved from the archive.</p>
+                <p className="mt-1 text-sm leading-5 text-slate-400">HTML, CSS, JavaScript, and local media paths—including audio URLs created by JavaScript—are resolved from the archive.</p>
               </div>
             </div>
             <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.07] pt-3 text-xs text-slate-400">
